@@ -52,6 +52,24 @@ export interface AggregatedReading {
   avgFlowRate: number;
 }
 
+/* ================= HELPER: Get Start of Today in Asia/Jakarta ================= */
+function getStartOfTodayJakarta(): string {
+  // Get current time in Asia/Jakarta timezone
+  const now = new Date();
+  const jakartaOffset = 7 * 60; // UTC+7 in minutes
+  
+  // Create a date object for "today" in Jakarta timezone
+  const jakartaDate = new Date(now.getTime() + jakartaOffset * 60 * 1000);
+  
+  // Set to start of day (00:00:00)
+  jakartaDate.setUTCHours(0, 0, 0, 0);
+  
+  // Convert back to UTC for InfluxDB query
+  const utcStartOfDay = new Date(jakartaDate.getTime() - jakartaOffset * 60 * 1000);
+  
+  return utcStartOfDay.toISOString();
+}
+
 /* ================= WRITE ================= */
 export async function writeWaterReading(data: {
   deviceId: string;
@@ -82,9 +100,12 @@ export async function queryAggregatedReadings(
 
   const bucket = process.env.INFLUXDB_BUCKET!;
 
+  // Handle special "today" range - query from start of today in Asia/Jakarta timezone
+  const effectiveRange = range === 'today' ? getStartOfTodayJakarta() : range;
+
   const query = `
     from(bucket: "${bucket}")
-      |> range(start: ${range})
+      |> range(start: ${effectiveRange})
       |> filter(fn: (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
       |> filter(fn: (r) => r._field == "total_volume" or r._field == "flow_rate")
@@ -210,12 +231,12 @@ export async function getTodayConsumption(deviceId: string): Promise<number> {
 
   const bucket = process.env.INFLUXDB_BUCKET!;
 
-  // Query data dari 24 jam terakhir
-  // Menggunakan -24h karena _time di InfluxDB mungkin tidak sesuai dengan waktu lokal
-  // (misal: ESP32 mengirim data dengan timestamp yang berbeda timezone)
+  // Query data dari awal hari ini (00:00:00 Asia/Jakarta) sampai sekarang
+  const startOfToday = getStartOfTodayJakarta();
+  
   const query = `
     from(bucket: "${bucket}")
-      |> range(start: -24h)
+      |> range(start: ${startOfToday})
       |> filter(fn:  (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
       |> filter(fn: (r) => r._field == "total_volume")

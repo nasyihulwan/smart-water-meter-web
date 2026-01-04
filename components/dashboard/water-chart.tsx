@@ -123,7 +123,7 @@ export function WaterChart({
     setMode('historical');
 
     const rangeMap = {
-      '1d': { range: '-24h', window: '1h' },
+      '1d': { range: 'today', window: '1h' },
       '7d': { range: '-7d', window: '1d' },
       '30d': { range: '-30d', window: '1d' },
     };
