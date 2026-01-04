@@ -36,12 +36,14 @@ const formatTime = (ts: string | Date) =>
   new Date(ts).toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
   });
 
 const formatDate = (ts: string | Date) =>
   new Date(ts).toLocaleDateString('id-ID', {
     day: '2-digit',
     month: 'short',
+    timeZone: 'Asia/Jakarta',
   });
 
 const formatDateTime = (ts: string | Date) =>
@@ -50,6 +52,7 @@ const formatDateTime = (ts: string | Date) =>
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
   });
 
 /* ================= CUSTOM TOOLTIP ================= */
