@@ -210,9 +210,9 @@ export async function getTodayConsumption(deviceId: string): Promise<number> {
 
   const bucket = process.env.INFLUXDB_BUCKET!;
 
-  // Query data dari 24 jam terakhir untuk mendapatkan data hari ini
-  // Menggunakan -24h untuk menghindari masalah timezone dimana _time di InfluxDB
-  // mungkin tercatat sebagai "kemarin" meskipun data baru dikirim
+  // Query data dari 24 jam terakhir
+  // Menggunakan -24h karena _time di InfluxDB mungkin tidak sesuai dengan waktu lokal
+  // (misal: ESP32 mengirim data dengan timestamp yang berbeda timezone)
   const query = `
     from(bucket: "${bucket}")
       |> range(start: -24h)
