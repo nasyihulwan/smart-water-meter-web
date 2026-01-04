@@ -273,3 +273,38 @@ export async function getWeeklyConsumption(deviceId: string): Promise<number> {
     });
   });
 }
+
+/* ================= QUERY MONTHLY CONSUMPTION ================= */
+export async function getMonthlyConsumption(deviceId: string): Promise<number> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
+
+  // Query 30 hari terakhir
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -30d)
+      |> filter(fn: (r) => r._measurement == "water_reading")
+      |> filter(fn: (r) => r.device_id == "${deviceId}")
+      |> filter(fn: (r) => r._field == "total_volume")
+      |> max()
+  `;
+
+  return new Promise((resolve, reject) => {
+    let maxVolume = 0;
+
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as { _value: number };
+        maxVolume = Number(o._value) || 0;
+      },
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
+      },
+      complete() {
+        resolve(maxVolume);
+      },
+    });
+  });
+}

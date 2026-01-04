@@ -7,6 +7,7 @@ import {
   getLatestReading,
   getTodayConsumption,
   getWeeklyConsumption,
+  getMonthlyConsumption,
   type WaterReading,
   type AggregatedReading,
 } from '@/lib/influxdb';
@@ -49,6 +50,9 @@ export async function GET(request: Request) {
     // ✅ Query konsumsi mingguan
     const weeklyVolume = await getWeeklyConsumption(deviceId);
 
+    // ✅ Query konsumsi bulanan
+    const monthlyVolume = await getMonthlyConsumption(deviceId);
+
     const avgFlowRate =
       historicalData.length > 0
         ? historicalData.reduce(
@@ -65,6 +69,7 @@ export async function GET(request: Request) {
       stats: {
         totalVolume: todayVolume.toFixed(3), // ✅ Hari ini
         weeklyVolume: weeklyVolume.toFixed(3), // ✅ Mingguan
+        monthlyVolume: monthlyVolume.toFixed(3), // ✅ Bulanan
         avgFlowRate: avgFlowRate.toFixed(2),
         dataPoints: historicalData.length,
       },
