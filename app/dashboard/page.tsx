@@ -167,7 +167,7 @@ export default function DashboardPage() {
             Water Realtime Usage
           </h2>
           <Badge variant="default" className="gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className={`w-2 h-2 rounded-full ${data?.latest ? 'bg-green-400 animate-pulse' : 'bg-red-500'}`} />
             Current Status
           </Badge>
         </div>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           />
 
           <StatsCard
-            title="Total Volume"
+            title="Total Volume This Day"
             value={parseFloat(data?.stats?.totalVolume ?? '0').toFixed(1)}
             unit="Liters"
             icon={Gauge}
