@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { WaterChart } from '@/components/dashboard/water-chart';
-import { WeeklyReport } from '@/components/dashboard/weekly-report';
+import { ConsumptionCard } from '@/components/dashboard/consumption-card';
+import { PricingSettingsCard, loadPricingSettings } from '@/components/dashboard/pricing-settings';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Droplet, Gauge, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,8 @@ import { Card } from '@/components/ui/card';
 import { Power } from 'lucide-react';
 
 import type { WaterReading } from '@/lib/influxdb';
+import type { PricingSettings } from '@/types/pricing';
+import { DEFAULT_PRICING_SETTINGS } from '@/types/pricing';
 
 interface DashboardData {
   success: boolean;
@@ -19,6 +22,7 @@ interface DashboardData {
   stats: {
     totalVolume: string;
     weeklyVolume: string;
+    monthlyVolume: string;
     avgFlowRate: string;
     dataPoints: number;
   };
@@ -29,9 +33,21 @@ export default function DashboardPage() {
   const [liveData, setLiveData] = useState<WaterReading[]>([]);
   const [historicalData, setHistoricalData] = useState<WaterReading[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(() => {
+    // Initialize from localStorage if available (SSR safe)
+    if (typeof window !== 'undefined') {
+      return loadPricingSettings();
+    }
+    return DEFAULT_PRICING_SETTINGS;
+  });
 
   // ✅ Track kapan terakhir kali user klik tombol
   const lastClickTime = useRef<number>(0);
+
+  // ✅ Callback for pricing settings change
+  const handlePricingSettingsChange = useCallback((settings: PricingSettings) => {
+    setPricingSettings(settings);
+  }, []);
 
   const fetchData = (range: string = '-24h', window?: string) => {
     const mode = window ? 'aggregated' : 'live';
@@ -257,13 +273,19 @@ export default function DashboardPage() {
             />
           </div>
 
-          <WeeklyReport
-            totalUsage={parseFloat(data?.stats?.weeklyVolume ?? '0')}
-            dateRange="01 Jan - 08 Jan 2026"
-            peakHour="Monday 18:00 (12. 5 L)"
-            weeklyCost={0}
-            notes="Penggunaan air masih dalam batas wajar.  Tetap monitor untuk efisiensi."
+          <ConsumptionCard
+            stats={{
+              todayVolume: parseFloat(data?.stats?.totalVolume ?? '0'),
+              weeklyVolume: parseFloat(data?.stats?.weeklyVolume ?? '0'),
+              monthlyVolume: parseFloat(data?.stats?.monthlyVolume ?? '0'),
+            }}
+            pricingSettings={pricingSettings}
           />
+        </div>
+
+        {/* Pricing Settings Section */}
+        <div className="mt-8">
+          <PricingSettingsCard onSettingsChange={handlePricingSettingsChange} />
         </div>
       </main>
     </div>
