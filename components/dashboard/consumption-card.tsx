@@ -5,6 +5,9 @@ import { Card } from '@/components/ui/card';
 import type { ConsumptionPeriod, PricingSettings } from '@/types/pricing';
 import { calculateTotalBill, formatRupiah, getBillingPeriod } from '@/lib/pricing';
 
+// Monthly target consumption in m³ - can be made configurable in the future
+const MONTHLY_TARGET_M3 = 30;
+
 interface ConsumptionStats {
   todayVolume: number; // in liters
   weeklyVolume: number; // in liters
@@ -90,12 +93,12 @@ export function ConsumptionCard({
             <div
               className="h-full bg-primary rounded-full transition-all duration-300"
               style={{
-                width: `${Math.min(100, (billing.volumeInM3 / 30) * 100)}%`,
+                width: `${Math.min(100, (billing.volumeInM3 / MONTHLY_TARGET_M3) * 100)}%`,
               }}
             />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Target: 30 m³/bulan
+            Target: {MONTHLY_TARGET_M3} m³/bulan
           </p>
         </div>
 
