@@ -3,8 +3,10 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import {
   queryWaterReadings,
+  queryAggregatedReadings,
   getLatestReading,
   type WaterReading,
+  type AggregatedReading,
 } from '@/lib/influxdb';
 import { getLatestMqttData } from '@/lib/mqttClient';
 
@@ -13,11 +15,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('device_id') ?? 'water_meter_01';
     const range = searchParams.get('range') ?? '-24h';
+    const mode = searchParams.get('mode') ?? 'live';
 
-    const historicalData: WaterReading[] = await queryWaterReadings(
-      deviceId,
-      range
-    );
+    let historicalData: (WaterReading | AggregatedReading)[] = [];
+
+    if (mode === 'aggregated') {
+      const window = searchParams.get('window') ?? '1h';
+      historicalData = await queryAggregatedReadings(deviceId, range, window);
+    } else {
+      historicalData = await queryWaterReadings(deviceId, range);
+    }
 
     const latestInflux = await getLatestReading(deviceId);
     const latestMqtt = getLatestMqttData();
@@ -34,14 +41,18 @@ export async function GET(request: Request) {
         }
       : null;
 
-    const totalVolume = historicalData.reduce(
-      (sum, r) => sum + r.totalVolume,
-      0
-    );
+    // ✅ FIX: Total volume harus dari latest reading (total kumulatif)
+    const totalVolume = latest?.totalVolume || 0;
 
+    // ✅ Avg flow rate dari historical data
     const avgFlowRate =
-      historicalData.reduce((sum, r) => sum + r.flowRate, 0) /
-      (historicalData.length || 1);
+      historicalData.length > 0
+        ? historicalData.reduce(
+            (sum, r) =>
+              sum + ('flowRate' in r ? r.flowRate : r.avgFlowRate || 0),
+            0
+          ) / historicalData.length
+        : 0;
 
     return NextResponse.json({
       success: true,

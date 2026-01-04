@@ -10,6 +10,8 @@ interface InfluxRow {
   flow_rate?: number;
   total_volume?: number;
   solenoid_state?: boolean;
+  consumption?: number;
+  avgFlowRate?: number;
 }
 
 function initInflux() {
@@ -44,6 +46,12 @@ export interface WaterReading {
   timestamp: Date;
 }
 
+export interface AggregatedReading {
+  timestamp: Date;
+  consumption: number;
+  avgFlowRate: number;
+}
+
 /* ================= WRITE ================= */
 export async function writeWaterReading(data: {
   deviceId: string;
@@ -62,6 +70,52 @@ export async function writeWaterReading(data: {
 
   writeApi.writePoint(point);
   await writeApi.flush();
+}
+
+/* ================= QUERY AGGREGATED (SIMPLIFIED) ================= */
+export async function queryAggregatedReadings(
+  deviceId: string,
+  range: string,
+  window: string
+): Promise<AggregatedReading[]> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
+
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: ${range})
+      |> filter(fn: (r) => r._measurement == "water_reading")
+      |> filter(fn: (r) => r.device_id == "${deviceId}")
+      |> filter(fn: (r) => r._field == "total_volume" or r._field == "flow_rate")
+      |> aggregateWindow(every: ${window}, fn: max, createEmpty: false)
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> filter(fn: (r) => r.total_volume > 0.0)
+      |> sort(columns: ["_time"], desc: false)
+  `;
+
+  const result: AggregatedReading[] = [];
+
+  return new Promise((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as InfluxRow;
+
+        result.push({
+          timestamp: new Date(o._time),
+          consumption: Number(o.total_volume) || 0,
+          avgFlowRate: Number(o.flow_rate) || 0,
+        });
+      },
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
+      },
+      complete() {
+        resolve(result);
+      },
+    });
+  });
 }
 
 /* ================= QUERY MANY ================= */
@@ -116,10 +170,10 @@ export async function getLatestReading(
   const bucket = process.env.INFLUXDB_BUCKET!;
   const query = `
     from(bucket: "${bucket}")
-      |> range(start: -1h)
+      |> range(start:  -1h)
       |> filter(fn: (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> pivot(rowKey:  ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> sort(columns: ["_time"], desc: true)
       |> limit(n: 1)
   `;

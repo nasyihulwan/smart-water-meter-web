@@ -8,17 +8,27 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts';
 
 /* ================= TYPES ================= */
 interface ChartPoint {
   timestamp: string | Date;
-  flowRate: number;
+  flowRate?: number;
+  consumption?: number;
+  avgFlowRate?: number;
 }
 
 interface WaterChartProps {
-  liveData: ChartPoint[]; // realtime (SSE)
-  historicalData: ChartPoint[]; // dari InfluxDB
+  liveData: ChartPoint[];
+  historicalData: ChartPoint[];
+  onRangeChange?: (range: string, window: string) => void;
+}
+
+interface ChartData {
+  time: string;
+  value: number;
+  originalTimestamp: string | Date;
 }
 
 /* ================= HELPERS ================= */
@@ -26,7 +36,12 @@ const formatTime = (ts: string | Date) =>
   new Date(ts).toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+  });
+
+const formatDate = (ts: string | Date) =>
+  new Date(ts).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
   });
 
 const formatDateTime = (ts: string | Date) =>
@@ -37,77 +52,213 @@ const formatDateTime = (ts: string | Date) =>
     minute: '2-digit',
   });
 
-/* ================= COMPONENT ================= */
-export function WaterChart({ liveData, historicalData }: WaterChartProps) {
-  const [mode, setMode] = useState<'live' | 'historical'>('live');
+/* ================= CUSTOM TOOLTIP ================= */
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    dataKey: string;
+    color: string;
+    payload: ChartData;
+  }>;
+  mode: 'live' | 'historical';
+  timeRange: '1d' | '7d' | '30d';
+}
 
-  // Tentukan sumber data
-  const source = mode === 'live' ? liveData : historicalData;
+const CustomTooltip = ({
+  active,
+  payload,
+  mode,
+  timeRange,
+}: CustomTooltipProps) => {
+  if (!active || !payload || payload.length === 0) return null;
 
-  // Mapping data → CHART DATA
-  const chartData = source.map((d) => ({
-    time:
-      mode === 'live'
-        ? formatTime(d.timestamp) // jam:menit:detik
-        : formatDateTime(d.timestamp), // hari + jam
-    flow: Number(d.flowRate.toFixed(2)),
-  }));
+  const data = payload[0].payload;
 
   return (
-    <div className="w-full">
-      {/* ===== MODE SWITCH ===== */}
-      <div className="flex gap-2 mb-3">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-xs text-muted-foreground mb-1">{data.time}</p>
+      <div className="flex items-center gap-2">
+        <div
+          className="w-3 h-3 rounded-full"
+          style={{ backgroundColor: payload[0].color }}
+        />
+        <p className="text-sm font-semibold">
+          {mode === 'live' ? (
+            <>
+              {data.value.toFixed(2)}{' '}
+              <span className="text-muted-foreground">L/min</span>
+            </>
+          ) : (
+            <>
+              {data.value.toFixed(2)}{' '}
+              <span className="text-muted-foreground">Liter</span>
+            </>
+          )}
+        </p>
+      </div>
+      {mode === 'historical' && (
+        <p className="text-xs text-muted-foreground mt-1">
+          {timeRange === '1d' ? 'Konsumsi per jam' : 'Konsumsi per hari'}
+        </p>
+      )}
+    </div>
+  );
+};
+
+/* ================= COMPONENT ================= */
+export function WaterChart({
+  liveData,
+  historicalData,
+  onRangeChange,
+}: WaterChartProps) {
+  const [mode, setMode] = useState<'live' | 'historical'>('live');
+  const [timeRange, setTimeRange] = useState<'1d' | '7d' | '30d'>('1d');
+
+  const handleRangeChange = (range: '1d' | '7d' | '30d') => {
+    setTimeRange(range);
+    setMode('historical');
+
+    const rangeMap = {
+      '1d': { range: '-24h', window: '1h' },
+      '7d': { range: '-7d', window: '1d' },
+      '30d': { range: '-30d', window: '1d' },
+    };
+
+    const config = rangeMap[range];
+    onRangeChange?.(config.range, config.window);
+  };
+
+  const source = mode === 'live' ? liveData : historicalData;
+
+  const chartData: ChartData[] = source.map((d) => {
+    const isAggregated = 'consumption' in d;
+
+    if (mode === 'live') {
+      return {
+        time: formatTime(d.timestamp),
+        value: Number((d.flowRate || 0).toFixed(2)),
+        originalTimestamp: d.timestamp,
+      };
+    }
+
+    if (isAggregated) {
+      return {
+        time:
+          timeRange === '1d'
+            ? formatTime(d.timestamp)
+            : formatDate(d.timestamp),
+        value: Number((d.consumption || 0).toFixed(2)),
+        originalTimestamp: d.timestamp,
+      };
+    }
+
+    return {
+      time: formatDateTime(d.timestamp),
+      value: Number((d.flowRate || 0).toFixed(2)),
+      originalTimestamp: d.timestamp,
+    };
+  });
+
+  return (
+    <div className="w-full bg-card rounded-lg p-6 border">
+      <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setMode('live')}
-          className={`px-3 py-1 rounded text-sm ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             mode === 'live'
               ? 'bg-green-600 text-white'
-              : 'bg-muted text-muted-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
           Live
         </button>
 
         <button
-          onClick={() => setMode('historical')}
-          className={`px-3 py-1 rounded text-sm ${
-            mode === 'historical'
+          onClick={() => handleRangeChange('1d')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            mode === 'historical' && timeRange === '1d'
               ? 'bg-blue-600 text-white'
-              : 'bg-muted text-muted-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
           }`}
         >
-          Historical
+          1 Hari
+        </button>
+
+        <button
+          onClick={() => handleRangeChange('7d')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            mode === 'historical' && timeRange === '7d'
+              ? 'bg-blue-600 text-white'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+        >
+          1 Minggu
+        </button>
+
+        <button
+          onClick={() => handleRangeChange('30d')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            mode === 'historical' && timeRange === '30d'
+              ? 'bg-blue-600 text-white'
+              : 'bg-muted text-muted-foreground hover: bg-muted/80'
+          }`}
+        >
+          1 Bulan
         </button>
       </div>
 
-      {/* ===== EMPTY STATE ===== */}
       {chartData.length === 0 ? (
-        <div className="h-[300px] flex items-center justify-center border rounded">
+        <div className="h-[300px] flex items-center justify-center border rounded-lg bg-muted/20">
           <p className="text-muted-foreground text-sm">
-            {mode === 'live'
-              ? 'Menunggu aliran air...'
-              : 'Tidak ada data historis'}
+            {mode === 'live' ? 'Menunggu aliran air.. .' : 'Tidak ada data'}
           </p>
         </div>
       ) : (
         <div style={{ width: '100%', height: 300 }}>
           <ResponsiveContainer>
             <LineChart data={chartData}>
-              <XAxis dataKey="time" />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <XAxis
+                dataKey="time"
+                tick={{ fontSize: 12 }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
               <YAxis
                 label={{
-                  value: 'L/min',
+                  value: mode === 'live' ? 'L/min' : 'Liter',
                   angle: -90,
                   position: 'insideLeft',
                 }}
+                tick={{ fontSize: 12 }}
               />
-              <Tooltip />
+              <Tooltip
+                content={(tooltipProps) => {
+                  return (
+                    <CustomTooltip
+                      active={tooltipProps.active}
+                      payload={
+                        tooltipProps.payload as Array<{
+                          value: number;
+                          dataKey: string;
+                          color: string;
+                          payload: ChartData;
+                        }>
+                      }
+                      mode={mode}
+                      timeRange={timeRange}
+                    />
+                  );
+                }}
+              />
               <Line
                 type="monotone"
-                dataKey="flow"
+                dataKey="value"
                 stroke={mode === 'live' ? '#10b981' : '#3b82f6'}
-                strokeWidth={3}
-                dot={false}
+                strokeWidth={2}
+                dot={mode === 'historical'}
                 isAnimationActive={false}
               />
             </LineChart>

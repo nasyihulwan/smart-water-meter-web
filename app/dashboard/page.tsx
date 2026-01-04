@@ -8,10 +8,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Droplet, Gauge, Power, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-/* ⬇️ PAKAI SATU SUMBER TIPE (BACKEND) */
 import type { WaterReading } from '@/lib/influxdb';
 
-/* ================= TYPES ================= */
 interface DashboardData {
   success: boolean;
   latest: WaterReading | null;
@@ -23,50 +21,57 @@ interface DashboardData {
   };
 }
 
-/* ================= COMPONENT ================= */
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [liveData, setLiveData] = useState<WaterReading[]>([]);
+  const [historicalData, setHistoricalData] = useState<WaterReading[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH ================= */
+  const fetchData = (range: string = '-24h', window?: string) => {
+    const mode = window ? 'aggregated' : 'live';
+    const url = `/api/dashboard?device_id=water_meter_01&range=${range}&mode=${mode}${
+      window ? `&window=${window}` : ''
+    }`;
 
-  useEffect(() => {
-    // 1️⃣ FETCH AWAL (INI YANG MEMATIKAN LOADING)
-    fetch('/api/dashboard?device_id=ESP32_001&range=-24h')
+    fetch(url)
       .then((res) => res.json())
       .then((json: DashboardData) => {
         if (json?.success) {
           setData(json);
+          // Set historical data (STATIC, tidak akan di-update SSE)
+          setHistoricalData(json.historical || []);
         }
       })
       .catch(console.error)
-      .finally(() => {
-        setLoading(false); // ⬅️ PENTING
-      });
+      .finally(() => setLoading(false));
+  };
 
-    // 2️⃣ SSE REALTIME
+  useEffect(() => {
+    // 1. Fetch initial data
+    fetchData();
+
+    // 2. Setup SSE untuk LIVE DATA saja
     const eventSource = new EventSource('/api/stream');
 
     eventSource.onmessage = (event) => {
       const realtime = JSON.parse(event.data);
 
+      const newPoint: WaterReading = {
+        ...realtime,
+        timestamp: new Date(),
+      };
+
+      // Update latest reading
       setData((prev) => {
         if (!prev) return prev;
-
-        const newPoint = {
-          ...realtime,
-          timestamp: new Date(),
-        };
-
         return {
           ...prev,
           latest: newPoint,
-          historical: [
-            ...(prev.historical ?? []),
-            newPoint, // ⬅️ INI KUNCI CHART HIDUP
-          ].slice(-300), // simpan max 300 titik (aman)
         };
       });
+
+      // Update LIVE DATA saja (max 300 points)
+      setLiveData((prev) => [...prev, newPoint].slice(-300));
     };
 
     eventSource.onerror = () => {
@@ -77,7 +82,6 @@ export default function DashboardPage() {
     return () => eventSource.close();
   }, []);
 
-  /* ================= LOADING ================= */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -96,22 +100,13 @@ export default function DashboardPage() {
     );
   }
 
-  /* ================= NORMALIZE (ANTI TYPE ERROR) ================= */
-  // Pastikan timestamp selalu Date (API kirim string)
-  const historical: WaterReading[] = data?.historical
-    ? data.historical.map((r) => ({
-        ...r,
-        timestamp: new Date(r.timestamp),
-      }))
-    : [];
-
   const latestReading: WaterReading = data?.latest
     ? {
         ...data.latest,
         timestamp: new Date(data.latest.timestamp),
       }
     : {
-        deviceId: 'ESP32_001',
+        deviceId: 'water_meter_01',
         flowRate: 0,
         totalVolume: 0,
         solenoidState: false,
@@ -121,13 +116,11 @@ export default function DashboardPage() {
   const formatNumber = (value: unknown, digits: number) => {
     return typeof value === 'number' && !Number.isNaN(value)
       ? value.toFixed(digits)
-      : '0.00';
+      : '0. 00';
   };
 
-  /* ================= RENDER ================= */
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between">
           <div className="flex items-center gap-3">
@@ -142,7 +135,6 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Title */}
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-bold text-primary mb-2">
             Water Realtime Usage
@@ -153,7 +145,6 @@ export default function DashboardPage() {
           </Badge>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatsCard
             title="Flow Rate"
@@ -179,25 +170,27 @@ export default function DashboardPage() {
             unit={latestReading.solenoidState ? '🟢' : '🔴'}
             icon={Power}
             iconColor="text-orange-500"
-            iconBgColor="bg-orange-50 dark:bg-orange-950"
+            iconBgColor="bg-orange-50 dark: bg-orange-950"
           />
         </div>
 
-        {/* Chart & Report */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <WaterChart
-              liveData={data?.historical ?? []} // realtime dari SSE (yang kamu append)
-              historicalData={data?.historical ?? []} // dari InfluxDB
+              liveData={liveData}
+              historicalData={historicalData}
+              onRangeChange={(range, window) => {
+                fetchData(range, window);
+              }}
             />
           </div>
 
           <WeeklyReport
             totalUsage={parseFloat(data?.stats?.totalVolume ?? '0')}
             dateRange="01 Jan - 08 Jan 2026"
-            peakHour="Monday 18:00 (12.5 L)"
+            peakHour="Monday 18:00 (12. 5 L)"
             weeklyCost={45000}
-            notes="Penggunaan air masih dalam batas wajar. Tetap monitor untuk efisiensi."
+            notes="Penggunaan air masih dalam batas wajar.  Tetap monitor untuk efisiensi."
           />
         </div>
       </main>

@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 
-dotenv.config({ path: '.env. local' });
+dotenv.config({ path: '.env.local' });
 
 const url = process.env.INFLUXDB_URL || 'http://localhost:8086';
 const token =
@@ -16,7 +16,9 @@ async function clearData() {
   console.log('📍 Organization:', org);
 
   try {
-    const deleteUrl = `${url}/api/v2/delete? org=${org}&bucket=${bucket}`;
+    const deleteUrl = `${url}/api/v2/delete?org=${encodeURIComponent(
+      org
+    )}&bucket=${encodeURIComponent(bucket)}`;
 
     const response = await fetch(deleteUrl, {
       method: 'POST',
@@ -26,8 +28,7 @@ async function clearData() {
       },
       body: JSON.stringify({
         start: '1970-01-01T00:00:00Z',
-        stop: '2030-12-31T23:59:59Z',
-        predicate: '_measurement="water_reading"',
+        stop: '2099-12-31T23:59:59Z',
       }),
     });
 
@@ -38,7 +39,10 @@ async function clearData() {
       console.error('❌ Error clearing data:', response.status, errorText);
     }
   } catch (error) {
-    console.error('❌ Error:', error instanceof Error ? error.message : error);
+    console.error(
+      '❌ Error:',
+      error instanceof Error ? error.message : String(error)
+    );
   }
 
   process.exit(0);
