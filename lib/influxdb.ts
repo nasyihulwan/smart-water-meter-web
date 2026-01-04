@@ -210,10 +210,12 @@ export async function getTodayConsumption(deviceId: string): Promise<number> {
 
   const bucket = process.env.INFLUXDB_BUCKET!;
 
-  // Query dari jam 00:00 hari ini
+  // Query data dari 24 jam terakhir untuk mendapatkan data hari ini
+  // Menggunakan -24h untuk menghindari masalah timezone dimana _time di InfluxDB
+  // mungkin tercatat sebagai "kemarin" meskipun data baru dikirim
   const query = `
     from(bucket: "${bucket}")
-      |> range(start: today())
+      |> range(start: -24h)
       |> filter(fn:  (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
       |> filter(fn: (r) => r._field == "total_volume")
