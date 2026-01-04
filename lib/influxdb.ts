@@ -280,7 +280,7 @@ export async function getMonthlyConsumption(deviceId: string): Promise<number> {
 
   const bucket = process.env.INFLUXDB_BUCKET!;
 
-  // Query 30 hari terakhir
+  // Query last 30 days
   const query = `
     from(bucket: "${bucket}")
       |> range(start: -30d)

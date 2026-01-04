@@ -13,35 +13,24 @@ export function calculateWaterCost(
   // Convert liters to m³
   const volumeInM3 = volumeInLiters / 1000;
 
-  let remainingVolume = volumeInM3;
   let totalCost = 0;
 
   // Sort tiers by minVolume to ensure correct calculation
   const sortedTiers = [...priceTiers].sort((a, b) => a.minVolume - b.minVolume);
 
   for (const tier of sortedTiers) {
-    if (remainingVolume <= 0) break;
-
     const tierMin = tier.minVolume;
     const tierMax = tier.maxVolume ?? Infinity;
-    const tierRange = tierMax - tierMin;
 
-    // Calculate volume in this tier
-    let volumeInTier: number;
-
+    // Skip if volume hasn't reached this tier
     if (volumeInM3 <= tierMin) {
-      // Haven't reached this tier yet
       continue;
-    } else if (volumeInM3 > tierMax) {
-      // Use full tier range
-      volumeInTier = tierRange;
-    } else {
-      // Partial tier usage
-      volumeInTier = volumeInM3 - tierMin;
     }
 
+    // Calculate volume charged at this tier's rate
+    const volumeInTier = Math.min(volumeInM3, tierMax) - tierMin;
+
     totalCost += volumeInTier * tier.pricePerM3;
-    remainingVolume -= volumeInTier;
   }
 
   return Math.round(totalCost);
