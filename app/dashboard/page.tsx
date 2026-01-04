@@ -261,7 +261,7 @@ export default function DashboardPage() {
             totalUsage={parseFloat(data?.stats?.weeklyVolume ?? '0')}
             dateRange="01 Jan - 08 Jan 2026"
             peakHour="Monday 18:00 (12. 5 L)"
-            weeklyCost={45000}
+            weeklyCost={0}
             notes="Penggunaan air masih dalam batas wajar.  Tetap monitor untuk efisiensi."
           />
         </div>
