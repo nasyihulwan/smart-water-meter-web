@@ -30,3 +30,20 @@ client.on('message', (_topic: string, message: Buffer) => {
 export function getLatestMqttData(): WaterMeterData | null {
   return latestData;
 }
+
+// ✅ TAMBAHKAN INI
+export function publishRelayControl(state: 'ON' | 'OFF'): void {
+  const payload = JSON.stringify({ relay: state });
+
+  if (client.connected) {
+    client.publish('water_meter/relay', payload, { qos: 1 }, (err) => {
+      if (err) {
+        console.error('❌ MQTT publish error:', err);
+      } else {
+        console.log(`✅ Published:  ${payload} to water_meter/relay`);
+      }
+    });
+  } else {
+    console.error('❌ MQTT client not connected');
+  }
+}

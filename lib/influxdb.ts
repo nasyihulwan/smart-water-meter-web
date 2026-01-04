@@ -203,3 +203,73 @@ export async function getLatestReading(
     });
   });
 }
+
+/* ================= QUERY TODAY'S CONSUMPTION ================= */
+export async function getTodayConsumption(deviceId: string): Promise<number> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
+
+  // Query dari jam 00:00 hari ini
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: today())
+      |> filter(fn:  (r) => r._measurement == "water_reading")
+      |> filter(fn: (r) => r.device_id == "${deviceId}")
+      |> filter(fn: (r) => r._field == "total_volume")
+      |> max()
+  `;
+
+  return new Promise((resolve, reject) => {
+    let maxVolume = 0;
+
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as { _value: number };
+        maxVolume = Number(o._value) || 0;
+      },
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
+      },
+      complete() {
+        resolve(maxVolume);
+      },
+    });
+  });
+}
+
+/* ================= QUERY WEEKLY CONSUMPTION ================= */
+export async function getWeeklyConsumption(deviceId: string): Promise<number> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
+
+  // Query 7 hari terakhir
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -7d)
+      |> filter(fn: (r) => r._measurement == "water_reading")
+      |> filter(fn: (r) => r. device_id == "${deviceId}")
+      |> filter(fn: (r) => r._field == "total_volume")
+      |> max()
+  `;
+
+  return new Promise((resolve, reject) => {
+    let maxVolume = 0;
+
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as { _value: number };
+        maxVolume = Number(o._value) || 0;
+      },
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
+      },
+      complete() {
+        resolve(maxVolume);
+      },
+    });
+  });
+}

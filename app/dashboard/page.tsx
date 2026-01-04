@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { WaterChart } from '@/components/dashboard/water-chart';
 import { WeeklyReport } from '@/components/dashboard/weekly-report';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Droplet, Gauge, Power, Home } from 'lucide-react';
+import { Droplet, Gauge, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Power } from 'lucide-react';
 
 import type { WaterReading } from '@/lib/influxdb';
 
@@ -16,6 +18,7 @@ interface DashboardData {
   historical: WaterReading[];
   stats: {
     totalVolume: string;
+    weeklyVolume: string;
     avgFlowRate: string;
     dataPoints: number;
   };
@@ -26,6 +29,9 @@ export default function DashboardPage() {
   const [liveData, setLiveData] = useState<WaterReading[]>([]);
   const [historicalData, setHistoricalData] = useState<WaterReading[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Track kapan terakhir kali user klik tombol
+  const lastClickTime = useRef<number>(0);
 
   const fetchData = (range: string = '-24h', window?: string) => {
     const mode = window ? 'aggregated' : 'live';
@@ -38,7 +44,6 @@ export default function DashboardPage() {
       .then((json: DashboardData) => {
         if (json?.success) {
           setData(json);
-          // Set historical data (STATIC, tidak akan di-update SSE)
           setHistoricalData(json.historical || []);
         }
       })
@@ -47,10 +52,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    // 1. Fetch initial data
     fetchData();
 
-    // 2. Setup SSE untuk LIVE DATA saja
     const eventSource = new EventSource('/api/stream');
 
     eventSource.onmessage = (event) => {
@@ -61,16 +64,24 @@ export default function DashboardPage() {
         timestamp: new Date(),
       };
 
-      // Update latest reading
+      // ✅ Ignore SSE update solenoid state selama 3 detik setelah user klik
+      const timeSinceClick = Date.now() - lastClickTime.current;
+      const shouldUpdateSolenoid = timeSinceClick > 3000;
+
       setData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          latest: newPoint,
+          latest: {
+            ...newPoint,
+            // ✅ Keep user's optimistic state jika baru klik
+            solenoidState: shouldUpdateSolenoid
+              ? newPoint.solenoidState
+              : prev.latest?.solenoidState ?? newPoint.solenoidState,
+          },
         };
       });
 
-      // Update LIVE DATA saja (max 300 points)
       setLiveData((prev) => [...prev, newPoint].slice(-300));
     };
 
@@ -116,7 +127,7 @@ export default function DashboardPage() {
   const formatNumber = (value: unknown, digits: number) => {
     return typeof value === 'number' && !Number.isNaN(value)
       ? value.toFixed(digits)
-      : '0. 00';
+      : '0.00';
   };
 
   return (
@@ -157,21 +168,82 @@ export default function DashboardPage() {
 
           <StatsCard
             title="Total Volume"
-            value={formatNumber(latestReading.totalVolume, 1)}
+            value={parseFloat(data?.stats?.totalVolume ?? '0').toFixed(1)}
             unit="Liters"
             icon={Gauge}
             iconColor="text-green-500"
             iconBgColor="bg-green-50 dark:bg-green-950"
           />
 
-          <StatsCard
-            title="Solenoid Valve"
-            value={latestReading.solenoidState ? 'OPEN' : 'CLOSED'}
-            unit={latestReading.solenoidState ? '🟢' : '🔴'}
-            icon={Power}
-            iconColor="text-orange-500"
-            iconBgColor="bg-orange-50 dark: bg-orange-950"
-          />
+          {/* SOLENOID VALVE - OPTIMISTIC UPDATE WITH DEBOUNCE */}
+          <Card className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Solenoid Valve
+                </p>
+                <button
+                  onClick={() => {
+                    const newState = !latestReading.solenoidState;
+                    const command = newState ? 'ON' : 'OFF';
+
+                    // ✅ Record waktu klik
+                    lastClickTime.current = Date.now();
+
+                    // ✅ Update UI instant
+                    setData((prev) => {
+                      if (!prev || !prev.latest) return prev;
+                      return {
+                        ...prev,
+                        latest: {
+                          ...prev.latest,
+                          solenoidState: newState,
+                        },
+                      };
+                    });
+
+                    // ✅ Kirim MQTT
+                    fetch('/api/relay', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ state: command }),
+                    })
+                      .then((r) => r.json())
+                      .then((data) => {
+                        console.log('✅ MQTT sent:', data);
+                      })
+                      .catch((err) => {
+                        console.error('❌ Failed:', err);
+                        // Rollback jika gagal
+                        setData((prev) => {
+                          if (!prev || !prev.latest) return prev;
+                          return {
+                            ...prev,
+                            latest: {
+                              ...prev.latest,
+                              solenoidState: !newState,
+                            },
+                          };
+                        });
+                      });
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                    latestReading.solenoidState
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-red-500 hover:bg-red-600 text-white'
+                  }`}
+                >
+                  <span className="text-xl">
+                    {latestReading.solenoidState ? '🟢' : '🔴'}
+                  </span>
+                  <span>{latestReading.solenoidState ? 'OPEN' : 'CLOSED'}</span>
+                </button>
+              </div>
+              <div className="p-3 rounded-full bg-orange-50 dark:bg-orange-950">
+                <Power className="h-6 w-6 text-orange-500" />
+              </div>
+            </div>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -186,7 +258,7 @@ export default function DashboardPage() {
           </div>
 
           <WeeklyReport
-            totalUsage={parseFloat(data?.stats?.totalVolume ?? '0')}
+            totalUsage={parseFloat(data?.stats?.weeklyVolume ?? '0')}
             dateRange="01 Jan - 08 Jan 2026"
             peakHour="Monday 18:00 (12. 5 L)"
             weeklyCost={45000}
