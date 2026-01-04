@@ -88,7 +88,7 @@ export async function queryAggregatedReadings(
       |> filter(fn: (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
       |> filter(fn: (r) => r._field == "total_volume" or r._field == "flow_rate")
-      |> aggregateWindow(every: ${window}, fn: max, createEmpty: false)
+      |> aggregateWindow(every: ${window}, fn: max, createEmpty: false, timeSrc: "_start")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> filter(fn: (r) => r.total_volume > 0.0)
       |> sort(columns: ["_time"], desc: false)
