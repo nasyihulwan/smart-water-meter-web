@@ -1,20 +1,41 @@
 import { InfluxDB, Point } from '@influxdata/influxdb-client';
 
-const url = process.env.INFLUXDB_URL!;
-const token = process.env.INFLUXDB_TOKEN!;
-const org = process.env.INFLUXDB_ORG!;
-const bucket = process.env.INFLUXDB_BUCKET!;
+/* ================= LAZY SINGLETON ================= */
+let influxDB: InfluxDB | null = null;
+let writeApi: ReturnType<InfluxDB['getWriteApi']> | null = null;
+let queryApi: ReturnType<InfluxDB['getQueryApi']> | null = null;
 
-// InfluxDB Client
-export const influxDB = new InfluxDB({ url, token });
+interface InfluxRow {
+  _time: string;
+  flow_rate?: number;
+  total_volume?: number;
+  solenoid_state?: boolean;
+}
 
-// Write API
-export const writeApi = influxDB.getWriteApi(org, bucket, 'ms');
+function initInflux() {
+  if (influxDB && writeApi && queryApi) {
+    return { influxDB, writeApi, queryApi };
+  }
 
-// Query API
-export const queryApi = influxDB.getQueryApi(org);
+  const url = process.env.INFLUXDB_URL;
+  const token = process.env.INFLUXDB_TOKEN;
+  const org = process.env.INFLUXDB_ORG;
+  const bucket = process.env.INFLUXDB_BUCKET;
 
-// Type definitions
+  if (!url || !token || !org || !bucket) {
+    throw new Error(
+      'InfluxDB env variables are missing (URL, TOKEN, ORG, BUCKET)'
+    );
+  }
+
+  influxDB = new InfluxDB({ url, token });
+  writeApi = influxDB.getWriteApi(org, bucket, 'ms');
+  queryApi = influxDB.getQueryApi(org);
+
+  return { influxDB, writeApi, queryApi };
+}
+
+/* ================= TYPES ================= */
 export interface WaterReading {
   deviceId: string;
   flowRate: number;
@@ -23,13 +44,15 @@ export interface WaterReading {
   timestamp: Date;
 }
 
-// Write water reading to InfluxDB
+/* ================= WRITE ================= */
 export async function writeWaterReading(data: {
   deviceId: string;
   flowRate: number;
   totalVolume: number;
   solenoidState: boolean;
 }) {
+  const { writeApi } = initInflux();
+
   const point = new Point('water_reading')
     .tag('device_id', data.deviceId)
     .floatField('flow_rate', data.flowRate)
@@ -41,40 +64,41 @@ export async function writeWaterReading(data: {
   await writeApi.flush();
 }
 
-// Query water readings from InfluxDB
+/* ================= QUERY MANY ================= */
 export async function queryWaterReadings(
   deviceId: string,
   range: string = '-1h'
 ): Promise<WaterReading[]> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
   const query = `
     from(bucket: "${bucket}")
       |> range(start: ${range})
       |> filter(fn: (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> pivot(rowKey: ["_time"], columnKey:  ["_field"], valueColumn: "_value")
-      |> sort(columns: ["_time"], desc:  false)
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> sort(columns: ["_time"], desc: false)
   `;
 
   const result: WaterReading[] = [];
 
   return new Promise((resolve, reject) => {
     queryApi.queryRows(query, {
-      next(
-        row: string[],
-        tableMeta: { toObject: (row: string[]) => Record<string, unknown> }
-      ) {
-        const o = tableMeta.toObject(row);
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as InfluxRow;
+
         result.push({
-          deviceId: deviceId, // ← TAMBAHKAN INI
-          timestamp: new Date(o._time as string),
-          flowRate: (o.flow_rate as number) || 0,
-          totalVolume: (o.total_volume as number) || 0,
-          solenoidState: (o.solenoid_state as boolean) || false,
+          deviceId,
+          timestamp: new Date(o._time),
+          flowRate: Number(o.flow_rate) || 0,
+          totalVolume: Number(o.total_volume) || 0,
+          solenoidState: Boolean(o.solenoid_state),
         });
       },
-      error(error: Error) {
-        console.error('InfluxDB Query Error:', error);
-        reject(error);
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
       },
       complete() {
         resolve(result);
@@ -83,16 +107,19 @@ export async function queryWaterReadings(
   });
 }
 
-// Get latest reading
+/* ================= QUERY LATEST ================= */
 export async function getLatestReading(
   deviceId: string
 ): Promise<WaterReading | null> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
   const query = `
     from(bucket: "${bucket}")
-      |> range(start:  -1h)
+      |> range(start: -1h)
       |> filter(fn: (r) => r._measurement == "water_reading")
       |> filter(fn: (r) => r.device_id == "${deviceId}")
-      |> pivot(rowKey:  ["_time"], columnKey: ["_field"], valueColumn: "_value")
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> sort(columns: ["_time"], desc: true)
       |> limit(n: 1)
   `;
@@ -101,22 +128,20 @@ export async function getLatestReading(
     let latest: WaterReading | null = null;
 
     queryApi.queryRows(query, {
-      next(
-        row: string[],
-        tableMeta: { toObject: (row: string[]) => Record<string, unknown> }
-      ) {
-        const o = tableMeta.toObject(row);
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as InfluxRow;
+
         latest = {
-          deviceId: deviceId, // ← TAMBAHKAN INI
-          timestamp: new Date(o._time as string),
-          flowRate: (o.flow_rate as number) || 0,
-          totalVolume: (o.total_volume as number) || 0,
-          solenoidState: (o.solenoid_state as boolean) || false,
+          deviceId,
+          timestamp: new Date(o._time),
+          flowRate: Number(o.flow_rate) || 0,
+          totalVolume: Number(o.total_volume) || 0,
+          solenoidState: Boolean(o.solenoid_state),
         };
       },
-      error(error: Error) {
-        console.error('InfluxDB Query Error:', error);
-        reject(error);
+      error(err) {
+        console.error('InfluxDB Query Error:', err);
+        reject(err);
       },
       complete() {
         resolve(latest);

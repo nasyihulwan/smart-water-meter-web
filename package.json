@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "worker": "tsx workers/mqtt-influx-worker.ts",
+    "dev:all": "concurrently \"npm run dev\" \"npm run worker\"",
     "generate-data": "tsx -r dotenv/config scripts/generate-dummy-data.ts dotenv_config_path=.env.local",
     "clear-data": "tsx -r dotenv/config scripts/clear-data.ts dotenv_config_path=.env.local"
   },
@@ -17,6 +19,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "lucide-react": "^0.562.0",
+    "mqtt": "^5.14.1",
     "next": "16.1.1",
     "next-themes": "^0.4.6",
     "node-fetch": "^3.3.2",
@@ -34,12 +37,14 @@
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.23",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
