@@ -161,7 +161,7 @@ export function WaterChart({
   });
 
   return (
-    <div className="w-full bg-card rounded-lg p-6 border">
+    <div className="w-full h-full bg-card rounded-lg p-6 border flex flex-col">
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setMode('live')}
@@ -209,13 +209,13 @@ export function WaterChart({
       </div>
 
       {chartData.length === 0 ? (
-        <div className="h-[300px] flex items-center justify-center border rounded-lg bg-muted/20">
+        <div className="flex-1 flex items-center justify-center border rounded-lg bg-muted/20 min-h-[300px]">
           <p className="text-muted-foreground text-sm">
             {mode === 'live' ? 'Menunggu aliran air.. .' : 'Tidak ada data'}
           </p>
         </div>
       ) : (
-        <div style={{ width: '100%', height: 300 }}>
+        <div className="flex-1 min-h-[300px]" style={{ width: '100%' }}>
           <ResponsiveContainer>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
