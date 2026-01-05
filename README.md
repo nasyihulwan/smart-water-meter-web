@@ -413,7 +413,6 @@ smart-water-meter-website/
 - [ ] Multi-device support
 - [ ] Push notifications
 - [ ] Water usage predictions (ML)
-- [ ] Mobile app (React Native)
 - [ ] Export data (CSV/PDF)
 
 ---
@@ -427,12 +426,6 @@ Kontribusi sangat diterima! Silakan buat issue atau pull request.
 3. Commit perubahan (`git commit -m 'Add some AmazingFeature'`)
 4. Push ke branch (`git push origin feature/AmazingFeature`)
 5. Buat Pull Request
-
----
-
-## 📝 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
