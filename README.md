@@ -431,7 +431,9 @@ Kontribusi sangat diterima! Silakan buat issue atau pull request.
 
 ## 📧 Contact
 
-**Nasyihul Wan** - [@nasyihulwan](https://github.com/nasyihulwan)
+**Muhammad Nasyih Ulwan**
+
+GitHub : [https://github.com/nasyihulwan](https://github.com/nasyihulwan) Email : [nasyihulwan@upi.edu](nasyihulwan@upi.edu)
 
 Project Link: [https://github.com/nasyihulwan/smart-water-meter-website](https://github.com/nasyihulwan/smart-water-meter-website)
 
