@@ -13,8 +13,8 @@ export interface PricingSettings {
 export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   priceTiers: [
     { minVolume: 0, maxVolume: 10, pricePerM3: 3000 },
-    { minVolume: 10, maxVolume: 20, pricePerM3: 4500 },
-    { minVolume: 20, maxVolume: null, pricePerM3: 6000 },
+    { minVolume: 11, maxVolume: 20, pricePerM3: 4500 },
+    { minVolume: 21, maxVolume: null, pricePerM3: 6000 },
   ],
   operationalCost: 5000,
   paymentDueDay: 20,

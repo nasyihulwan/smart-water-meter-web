@@ -68,6 +68,25 @@ export function PricingSettingsCard({
         ...newTiers[index],
         maxVolume: value === '' ? null : numValue,
       };
+      // Auto-update minVolume of next tier (maxVolume + 1)
+      if (value !== '' && index < newTiers.length - 1) {
+        newTiers[index + 1] = {
+          ...newTiers[index + 1],
+          minVolume: numValue + 1,
+        };
+      }
+    } else if (field === 'minVolume') {
+      newTiers[index] = {
+        ...newTiers[index],
+        minVolume: numValue,
+      };
+      // Auto-update maxVolume of previous tier (minVolume - 1)
+      if (index > 0) {
+        newTiers[index - 1] = {
+          ...newTiers[index - 1],
+          maxVolume: numValue - 1,
+        };
+      }
     } else {
       newTiers[index] = {
         ...newTiers[index],
@@ -81,18 +100,22 @@ export function PricingSettingsCard({
 
   const handleAddTier = () => {
     const lastTier = settings.priceTiers[settings.priceTiers.length - 1];
-    const newMinVolume = lastTier?.maxVolume ?? (lastTier ? lastTier.minVolume + 10 : 0);
+    const newMaxVolume =
+      lastTier?.maxVolume ?? (lastTier ? lastTier.minVolume + 10 : 10);
 
     const newTier: PriceTier = {
-      minVolume: newMinVolume,
+      minVolume: newMaxVolume + 1, // Start from previous maxVolume + 1
       maxVolume: null,
       pricePerM3: lastTier?.pricePerM3 ?? 5000,
     };
 
     // Update the previous tier's maxVolume if it was null
     const newTiers = [...settings.priceTiers];
-    if (newTiers.length > 0 && newTiers[newTiers.length - 1].maxVolume === null) {
-      newTiers[newTiers.length - 1].maxVolume = newMinVolume;
+    if (
+      newTiers.length > 0 &&
+      newTiers[newTiers.length - 1].maxVolume === null
+    ) {
+      newTiers[newTiers.length - 1].maxVolume = newMaxVolume;
     }
 
     setSettings({ ...settings, priceTiers: [...newTiers, newTier] });
@@ -138,10 +161,7 @@ export function PricingSettingsCard({
 
   return (
     <Card className="mb-6">
-      <CardHeader
-        className="cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
-      >
+      <CardHeader className="cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-muted-foreground" />

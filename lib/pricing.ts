@@ -2,6 +2,9 @@ import type { PriceTier, PricingSettings } from '@/types/pricing';
 
 /**
  * Calculate water cost based on tiered pricing
+ * Tiers use inclusive ranges: 0-10, 11-20, 21-...
+ * For 49 m³ with tiers (0-10, 11-20, 21-∞):
+ *   Tier 1: 10 m³, Tier 2: 10 m³, Tier 3: 29 m³
  * @param volumeInLiters - Water consumption in liters
  * @param priceTiers - Array of price tiers
  * @returns Total cost in Rupiah
@@ -23,14 +26,19 @@ export function calculateWaterCost(
     const tierMax = tier.maxVolume ?? Infinity;
 
     // Skip if volume hasn't reached this tier
-    if (volumeInM3 <= tierMin) {
+    if (volumeInM3 < tierMin) {
       continue;
     }
 
-    // Calculate volume charged at this tier's rate
-    const volumeInTier = Math.min(volumeInM3, tierMax) - tierMin;
+    // For inclusive ranges (0-10, 11-20, 21-∞):
+    // Tier starting at 0: effectiveMin = 0
+    // Other tiers: effectiveMin = tierMin - 1 (previous tier's maxVolume)
+    const effectiveMin = tierMin === 0 ? 0 : tierMin - 1;
+    const volumeInTier = Math.min(volumeInM3, tierMax) - effectiveMin;
 
-    totalCost += volumeInTier * tier.pricePerM3;
+    if (volumeInTier > 0) {
+      totalCost += volumeInTier * tier.pricePerM3;
+    }
   }
 
   return Math.round(totalCost);

@@ -4,9 +4,13 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { StatsCard } from '@/components/dashboard/stats-card';
 import { WaterChart } from '@/components/dashboard/water-chart';
 import { ConsumptionCard } from '@/components/dashboard/consumption-card';
-import { PricingSettingsCard, loadPricingSettings } from '@/components/dashboard/pricing-settings';
+import {
+  PricingSettingsCard,
+  loadPricingSettings,
+} from '@/components/dashboard/pricing-settings';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Droplet, Gauge, Home } from 'lucide-react';
+import { Droplet, Gauge, Home, History } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Power } from 'lucide-react';
@@ -33,21 +37,26 @@ export default function DashboardPage() {
   const [liveData, setLiveData] = useState<WaterReading[]>([]);
   const [historicalData, setHistoricalData] = useState<WaterReading[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(() => {
-    // Initialize from localStorage if available (SSR safe)
-    if (typeof window !== 'undefined') {
-      return loadPricingSettings();
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(
+    () => {
+      // Initialize from localStorage if available (SSR safe)
+      if (typeof window !== 'undefined') {
+        return loadPricingSettings();
+      }
+      return DEFAULT_PRICING_SETTINGS;
     }
-    return DEFAULT_PRICING_SETTINGS;
-  });
+  );
 
   // ✅ Track kapan terakhir kali user klik tombol
   const lastClickTime = useRef<number>(0);
 
   // ✅ Callback for pricing settings change
-  const handlePricingSettingsChange = useCallback((settings: PricingSettings) => {
-    setPricingSettings(settings);
-  }, []);
+  const handlePricingSettingsChange = useCallback(
+    (settings: PricingSettings) => {
+      setPricingSettings(settings);
+    },
+    []
+  );
 
   const fetchData = (range: string = '-24h', window?: string) => {
     const mode = window ? 'aggregated' : 'live';
@@ -155,6 +164,12 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold">Smart Water Meter</h1>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/history">
+              <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent transition-colors">
+                <History className="h-4 w-4" />
+                <span className="hidden sm:inline">Historis</span>
+              </button>
+            </Link>
             <ThemeToggle />
             <Home className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer" />
           </div>
@@ -167,7 +182,11 @@ export default function DashboardPage() {
             Water Realtime Usage
           </h2>
           <Badge variant="default" className="gap-2">
-            <span className={`w-2 h-2 rounded-full ${data?.latest ? 'bg-green-400 animate-pulse' : 'bg-red-500'}`} />
+            <span
+              className={`w-2 h-2 rounded-full ${
+                data?.latest ? 'bg-green-400 animate-pulse' : 'bg-red-500'
+              }`}
+            />
             Current Status
           </Badge>
         </div>
