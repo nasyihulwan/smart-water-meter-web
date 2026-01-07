@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Training data
+/data/historical/*.xlsx
+/data/historical/metadata.json
+
+# Keep folder but ignore contents
+/data/historical/*
+!/data/historical/.gitkeep

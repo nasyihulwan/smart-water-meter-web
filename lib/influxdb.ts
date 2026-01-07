@@ -57,16 +57,18 @@ function getStartOfTodayJakarta(): string {
   // Get current time in Asia/Jakarta timezone
   const now = new Date();
   const jakartaOffset = 7 * 60; // UTC+7 in minutes
-  
+
   // Create a date object for "today" in Jakarta timezone
   const jakartaDate = new Date(now.getTime() + jakartaOffset * 60 * 1000);
-  
+
   // Set to start of day (00:00:00)
   jakartaDate.setUTCHours(0, 0, 0, 0);
-  
+
   // Convert back to UTC for InfluxDB query
-  const utcStartOfDay = new Date(jakartaDate.getTime() - jakartaOffset * 60 * 1000);
-  
+  const utcStartOfDay = new Date(
+    jakartaDate.getTime() - jakartaOffset * 60 * 1000
+  );
+
   return utcStartOfDay.toISOString();
 }
 
@@ -233,7 +235,7 @@ export async function getTodayConsumption(deviceId: string): Promise<number> {
 
   // Query data dari awal hari ini (00:00:00 Asia/Jakarta) sampai sekarang
   const startOfToday = getStartOfTodayJakarta();
-  
+
   const query = `
     from(bucket: "${bucket}")
       |> range(start: ${startOfToday})
@@ -327,6 +329,69 @@ export async function getMonthlyConsumption(deviceId: string): Promise<number> {
       },
       complete() {
         resolve(maxVolume);
+      },
+    });
+  });
+}
+
+/* ================= EXPORT DATA FOR TRAINING ================= */
+export async function exportInfluxDataForTraining(
+  deviceId: string,
+  range: string, // e.g., "-30d", "-90d"
+  format: 'daily' | 'monthly'
+): Promise<Array<{ date: string; total_m3: number }>> {
+  const { queryApi } = initInflux();
+
+  const bucket = process.env.INFLUXDB_BUCKET!;
+
+  // Determine aggregation window based on format
+  const window = format === 'daily' ? '1d' : '30d';
+
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: ${range})
+      |> filter(fn: (r) => r._measurement == "water_reading")
+      |> filter(fn: (r) => r.device_id == "${deviceId}")
+      |> filter(fn: (r) => r._field == "total_volume")
+      |> aggregateWindow(every: ${window}, fn: max, createEmpty: false, timeSrc: "_start")
+      |> sort(columns: ["_time"], desc: false)
+  `;
+
+  const result: Array<{ date: string; total_m3: number }> = [];
+
+  return new Promise((resolve, reject) => {
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row) as { _time: string; _value: number };
+        const timestamp = new Date(o._time);
+
+        // Format date based on format type
+        let dateStr: string;
+        if (format === 'monthly') {
+          const year = timestamp.getFullYear();
+          const month = (timestamp.getMonth() + 1).toString().padStart(2, '0');
+          dateStr = `${year}-${month}`;
+        } else {
+          const year = timestamp.getFullYear();
+          const month = (timestamp.getMonth() + 1).toString().padStart(2, '0');
+          const day = timestamp.getDate().toString().padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
+        }
+
+        // Convert liters to m³ (assuming _value is in liters)
+        const totalM3 = Number(o._value) || 0;
+
+        result.push({
+          date: dateStr,
+          total_m3: totalM3,
+        });
+      },
+      error(err) {
+        console.error('InfluxDB Export Query Error:', err);
+        reject(err);
+      },
+      complete() {
+        resolve(result);
       },
     });
   });

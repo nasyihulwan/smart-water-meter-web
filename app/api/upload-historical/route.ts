@@ -1,0 +1,228 @@
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  parseXLSX,
+  validateUploadedData,
+  calculateFileHash,
+} from '@/lib/retrain-utils';
+import fs from 'fs';
+import path from 'path';
+import { randomUUID } from 'crypto';
+import type { HistoricalUpload } from '@/types/retrain';
+
+const UPLOAD_DIR = path.join(process.cwd(), 'data', 'historical');
+const METADATA_FILE = path.join(UPLOAD_DIR, 'metadata.json');
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function getCurrentTimestamp(): string {
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
+  return `[${hours}:${minutes}:${seconds}]`;
+}
+
+function ensureUploadDir() {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+}
+
+function loadMetadata(): HistoricalUpload[] {
+  if (!fs.existsSync(METADATA_FILE)) {
+    return [];
+  }
+  try {
+    const data = fs.readFileSync(METADATA_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error(
+      `${getCurrentTimestamp()} [UPLOAD] Failed to load metadata:`,
+      err
+    );
+    return [];
+  }
+}
+
+function saveMetadata(metadata: HistoricalUpload[]) {
+  try {
+    fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
+  } catch (err) {
+    console.error(
+      `${getCurrentTimestamp()} [UPLOAD] Failed to save metadata:`,
+      err
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    ensureUploadDir();
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      console.error(`${getCurrentTimestamp()} [UPLOAD] No file provided`);
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // Validate file type
+    if (!file.name.endsWith('.xlsx')) {
+      console.error(
+        `${getCurrentTimestamp()} [UPLOAD] Invalid file type: ${file.name}`
+      );
+      return NextResponse.json(
+        { error: 'Only .xlsx files allowed' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    console.log(
+      `${getCurrentTimestamp()} [UPLOAD] Receiving file: ${
+        file.name
+      } (${fileSizeMB} MB)`
+    );
+
+    if (file.size > MAX_FILE_SIZE) {
+      console.error(
+        `${getCurrentTimestamp()} [UPLOAD] File too large: ${fileSizeMB}MB`
+      );
+      return NextResponse.json(
+        { error: 'File exceeds 10MB limit' },
+        { status: 413 }
+      );
+    }
+
+    // Calculate file hash for duplicate detection
+    const fileHash = await calculateFileHash(file);
+    const metadata = loadMetadata();
+    const duplicate = metadata.find((u) => u.fileHash === fileHash);
+
+    if (duplicate) {
+      console.warn(
+        `${getCurrentTimestamp()} [UPLOAD] Duplicate file detected: ${fileHash}`
+      );
+      return NextResponse.json(
+        { error: 'This file was already uploaded', existingUpload: duplicate },
+        { status: 409 }
+      );
+    }
+
+    // Parse XLSX file
+    let parsedData;
+    try {
+      parsedData = await parseXLSX(file);
+      console.log(
+        `${getCurrentTimestamp()} [UPLOAD] Parsed ${parsedData.length} rows`
+      );
+    } catch (err) {
+      console.error(
+        `${getCurrentTimestamp()} [UPLOAD] Failed to parse XLSX:`,
+        err
+      );
+      return NextResponse.json(
+        {
+          error: 'Failed to parse Excel file',
+          details: err instanceof Error ? err.message : 'Unknown error',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate data structure
+    const arrayData = parsedData.map((row) => [row.date, row.total_m3]);
+    arrayData.unshift(['date', 'total_m3']); // Add header row
+
+    const validation = validateUploadedData(arrayData as unknown[][]);
+
+    if (!validation.valid) {
+      console.error(
+        `${getCurrentTimestamp()} [UPLOAD] Validation failed:`,
+        validation.errors
+      );
+      return NextResponse.json(
+        {
+          error: 'Invalid data structure',
+          errors: validation.errors,
+          warnings: validation.warnings,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(
+      `${getCurrentTimestamp()} [UPLOAD] Validation passed, ${
+        validation.errors.length
+      } errors, ${validation.warnings.length} warnings`
+    );
+
+    if (validation.warnings.length > 0) {
+      console.warn(
+        `${getCurrentTimestamp()} [UPLOAD] Warnings:`,
+        validation.warnings
+      );
+    }
+
+    // Determine date range
+    const dates = parsedData.map((d) => d.date).sort();
+    const dateRange = {
+      start: dates[0],
+      end: dates[dates.length - 1],
+    };
+
+    console.log(
+      `${getCurrentTimestamp()} [UPLOAD] Detected type: ${
+        validation.dataType
+      }, range: ${dateRange.start} to ${dateRange.end}`
+    );
+
+    // Save file
+    const uploadId = randomUUID();
+    const timestamp = Date.now();
+    const savedFilename = `upload_${timestamp}.xlsx`;
+    const savedPath = path.join(UPLOAD_DIR, savedFilename);
+
+    const buffer = await file.arrayBuffer();
+    fs.writeFileSync(savedPath, Buffer.from(buffer));
+    console.log(`${getCurrentTimestamp()} [UPLOAD] Saved to: ${savedPath}`);
+
+    // Create upload record
+    const upload: HistoricalUpload = {
+      id: uploadId,
+      filename: file.name,
+      uploadedAt: new Date().toISOString(),
+      dataType: validation.dataType,
+      rowCount: parsedData.length,
+      dateRange,
+      fileHash,
+      status: 'uploaded',
+    };
+
+    // Update metadata
+    metadata.push(upload);
+    saveMetadata(metadata);
+    console.log(`${getCurrentTimestamp()} [UPLOAD] Updated metadata.json`);
+
+    return NextResponse.json({
+      success: true,
+      upload: {
+        id: upload.id,
+        filename: upload.filename,
+        dataType: upload.dataType,
+        rowCount: upload.rowCount,
+        dateRange: upload.dateRange,
+      },
+    });
+  } catch (err) {
+    console.error(`${getCurrentTimestamp()} [UPLOAD] Unexpected error:`, err);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: err instanceof Error ? err.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
