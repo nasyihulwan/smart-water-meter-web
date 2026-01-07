@@ -293,10 +293,6 @@ export function HistoryUpload({
               💡 <strong>Rekomendasi:</strong> Gunakan data harian untuk
               prediksi lebih akurat
             </p>
-            <ul className="text-xs text-blue-800 dark:text-blue-300 mt-1 ml-4 space-y-0.5">
-              <li>• Data bulanan: akurasi ~85-90%</li>
-              <li>• Data harian: akurasi ~90-95%</li>
-            </ul>
           </div>
         </div>
 
