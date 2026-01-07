@@ -25,6 +25,19 @@ export function ForecastSummary({
   forecastData,
   pricingSettings,
 }: ForecastSummaryProps) {
+  // Validate forecast data structure
+  if (!forecastData || !forecastData.daily || !forecastData.monthly) {
+    return (
+      <Card className="p-6">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">
+            Data prediksi tidak valid. Silakan refresh halaman.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
   // Get today's forecast
   const today = new Date().toISOString().split('T')[0];
   const todayForecast = forecastData.daily.find((d) => d.date === today);

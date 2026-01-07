@@ -9,21 +9,27 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PenLine, Calendar, Droplet, Calculator } from 'lucide-react';
+import { PenLine, Droplet } from 'lucide-react';
 import type { HistoryPricingSettings, HistoryRecord } from '@/types/history';
 import {
   formatMonthDisplay,
   formatMonthKey,
   getDaysInMonth,
   calculateWaterCost,
-  formatRupiah,
 } from '@/lib/history';
 import { MONTH_NAMES_ID } from '@/types/history';
 
 interface HistoryManualInputProps {
   pricingSettings: HistoryPricingSettings;
-  onSubmit: (record: HistoryRecord) => void;
+  onSubmit: (records: HistoryRecord[]) => void;
   onBack: () => void;
+}
+
+interface MonthInput {
+  id: string;
+  month: number;
+  year: number;
+  volumeM3: string;
 }
 
 export function HistoryManualInput({
@@ -34,81 +40,101 @@ export function HistoryManualInput({
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 
-  const [month, setMonth] = useState(currentMonth);
-  const [year, setYear] = useState(currentYear);
-  const [volumeM3, setVolumeM3] = useState<string>('');
-  const [waterCost, setWaterCost] = useState<string>('');
-  const [fixedCost, setFixedCost] = useState<string>(
-    pricingSettings.fixedCost.toString()
-  );
-  const [totalCost, setTotalCost] = useState<string>('');
-  const [daysInMonth, setDaysInMonth] = useState<string>(
-    getDaysInMonth(currentYear, currentMonth).toString()
-  );
-  const [autoCalculate, setAutoCalculate] = useState(true);
+  const [monthCount, setMonthCount] = useState<number>(1);
+  const [inputs, setInputs] = useState<MonthInput[]>([
+    {
+      id: '1',
+      month: currentMonth,
+      year: currentYear,
+      volumeM3: '',
+    },
+  ]);
 
-  // Update days in month when month/year changes
-  const handleMonthChange = (newMonth: number) => {
-    setMonth(newMonth);
-    setDaysInMonth(getDaysInMonth(year, newMonth).toString());
-  };
+  const handleMonthCountChange = (count: number) => {
+    setMonthCount(count);
 
-  const handleYearChange = (newYear: number) => {
-    setYear(newYear);
-    setDaysInMonth(getDaysInMonth(newYear, month).toString());
-  };
-
-  // Auto calculate costs when volume changes
-  const handleVolumeChange = (value: string) => {
-    setVolumeM3(value);
-
-    if (autoCalculate && value) {
-      const vol = parseFloat(value) || 0;
-      const calculatedWaterCost = calculateWaterCost(
-        vol,
-        pricingSettings.tiers
-      );
-      const fixed = parseFloat(fixedCost) || pricingSettings.fixedCost;
-
-      setWaterCost(calculatedWaterCost.toString());
-      setTotalCost((calculatedWaterCost + fixed).toString());
+    // Generate month inputs
+    const newInputs: MonthInput[] = [];
+    for (let i = 0; i < count; i++) {
+      const date = new Date(currentYear, currentMonth - i, 1);
+      newInputs.push({
+        id: String(i + 1),
+        month: date.getMonth(),
+        year: date.getFullYear(),
+        volumeM3: inputs[i]?.volumeM3 || '',
+      });
     }
+    setInputs(newInputs);
   };
 
-  const handleFixedCostChange = (value: string) => {
-    setFixedCost(value);
-
-    if (autoCalculate && volumeM3) {
-      const water = parseFloat(waterCost) || 0;
-      const fixed = parseFloat(value) || 0;
-      setTotalCost((water + fixed).toString());
-    }
+  const updateInput = (
+    id: string,
+    field: keyof MonthInput,
+    value: string | number
+  ) => {
+    setInputs((prev) =>
+      prev.map((input) =>
+        input.id === id ? { ...input, [field]: value } : input
+      )
+    );
   };
 
   const handleSubmit = () => {
-    const vol = parseFloat(volumeM3) || 0;
-    const water =
-      parseFloat(waterCost) || calculateWaterCost(vol, pricingSettings.tiers);
-    const fixed = parseFloat(fixedCost) || pricingSettings.fixedCost;
-    const total = parseFloat(totalCost) || water + fixed;
-    const days = parseInt(daysInMonth) || getDaysInMonth(year, month);
+    const records: HistoryRecord[] = [];
+    const monthKeys = new Set<string>();
 
-    const record: HistoryRecord = {
-      id: `manual-${year}-${month}-${Date.now()}`,
-      month: formatMonthKey(year, month),
-      monthDisplay: formatMonthDisplay(year, month),
-      volumeM3: vol,
-      waterCost: water,
-      fixedCost: fixed,
-      totalCost: total,
-      daysInMonth: days,
-      avgDailyUsage: vol / days,
-    };
+    // Validate and create records
+    for (const input of inputs) {
+      const vol = parseFloat(input.volumeM3);
 
-    onSubmit(record);
+      if (isNaN(vol) || vol < 0) continue;
+
+      const monthKey = formatMonthKey(input.year, input.month);
+
+      // Check for duplicates
+      if (monthKeys.has(monthKey)) {
+        alert(
+          `Bulan ${formatMonthDisplay(
+            input.year,
+            input.month
+          )} muncul lebih dari sekali. Harap periksa input Anda.`
+        );
+        return;
+      }
+      monthKeys.add(monthKey);
+
+      const days = getDaysInMonth(input.year, input.month);
+      const waterCost = calculateWaterCost(vol, pricingSettings.tiers);
+      const totalCost = waterCost + pricingSettings.fixedCost;
+
+      records.push({
+        id: `manual-${monthKey}-${Date.now()}`,
+        month: monthKey,
+        monthDisplay: formatMonthDisplay(input.year, input.month),
+        volumeM3: vol,
+        waterCost,
+        fixedCost: pricingSettings.fixedCost,
+        totalCost,
+        daysInMonth: days,
+        avgDailyUsage: vol / days,
+      });
+    }
+
+    if (records.length === 0) {
+      alert('Harap isi setidaknya satu bulan dengan volume yang valid');
+      return;
+    }
+
+    // Sort by month
+    records.sort((a, b) => a.month.localeCompare(b.month));
+
+    onSubmit(records);
   };
 
-  const isValid = volumeM3 && parseFloat(volumeM3) >= 0;
+  const isValid = inputs.some((input) => {
+    const vol = parseFloat(input.volumeM3);
+    return !isNaN(vol) && vol >= 0;
+  });
 
   // Generate year options (last 10 years)
   const yearOptions = Array.from({ length: 10 }, (_, i) => currentYear - i);
@@ -118,187 +144,123 @@ export function HistoryManualInput({
       <CardHeader>
         <div className="flex items-center gap-2">
           <PenLine className="h-5 w-5 text-primary" />
-          <CardTitle>Input Manual</CardTitle>
+          <CardTitle>Input Manual (Beberapa Bulan)</CardTitle>
         </div>
         <CardDescription>
-          Masukkan data historis penggunaan air secara manual
+          Masukkan data historis penggunaan air untuk beberapa bulan sekaligus
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Month & Year Selection */}
+        {/* Month Count Selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Periode
+          <label className="text-sm font-medium">
+            Berapa bulan data yang akan Anda input?
           </label>
-          <div className="flex gap-3">
-            <select
-              value={month}
-              onChange={(e) => handleMonthChange(parseInt(e.target.value))}
-              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background cursor-pointer"
-            >
-              {MONTH_NAMES_ID.map((name, index) => (
-                <option key={index} value={index}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={year}
-              onChange={(e) => handleYearChange(parseInt(e.target.value))}
-              className="w-24 px-3 py-2 text-sm border rounded-md bg-background cursor-pointer"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Volume */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Droplet className="h-4 w-4" />
-            Volume Pemakaian
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={volumeM3}
-              onChange={(e) => handleVolumeChange(e.target.value)}
-              placeholder="Contoh: 15"
-              className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
-              min="0"
-              step="0.01"
-            />
-            <span className="text-sm text-muted-foreground">m³</span>
-          </div>
-        </div>
-
-        {/* Auto Calculate Toggle */}
-        <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-          <input
-            type="checkbox"
-            id="autoCalculate"
-            checked={autoCalculate}
-            onChange={(e) => setAutoCalculate(e.target.checked)}
-            className="w-4 h-4 cursor-pointer"
-          />
-          <label
-            htmlFor="autoCalculate"
-            className="text-sm cursor-pointer flex-1"
+          <select
+            value={monthCount}
+            onChange={(e) => handleMonthCountChange(parseInt(e.target.value))}
+            className="w-full px-3 py-2 text-sm border rounded-md bg-background cursor-pointer"
           >
-            <span className="font-medium">Hitung otomatis</span>
-            <span className="text-muted-foreground block text-xs">
-              Biaya dihitung berdasarkan tarif yang sudah diatur
-            </span>
-          </label>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((count) => (
+              <option key={count} value={count}>
+                {count} bulan
+              </option>
+            ))}
+          </select>
         </div>
 
-        {/* Costs */}
+        {/* Month Inputs */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            <span className="text-sm font-medium">Rincian Biaya</span>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Data Bulanan</p>
+            <p className="text-xs text-muted-foreground">
+              {inputs.filter((i) => i.volumeM3).length} dari {inputs.length}{' '}
+              terisi
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Water Cost */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Biaya Air</label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Rp</span>
-                <input
-                  type="number"
-                  value={waterCost}
-                  onChange={(e) => setWaterCost(e.target.value)}
-                  placeholder="0"
-                  disabled={autoCalculate}
-                  className="flex-1 px-3 py-2 text-sm border rounded-md bg-background disabled:opacity-50"
-                  min="0"
-                />
-              </div>
-            </div>
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+            {inputs.map((input, index) => (
+              <div
+                key={input.id}
+                className="p-4 border rounded-lg bg-muted/30 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Bulan #{index + 1}</p>
+                </div>
 
-            {/* Fixed Cost */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                Biaya Tetap
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Rp</span>
-                <input
-                  type="number"
-                  value={fixedCost}
-                  onChange={(e) => handleFixedCostChange(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
-                  min="0"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Bulan
+                    </label>
+                    <select
+                      value={input.month}
+                      onChange={(e) =>
+                        updateInput(input.id, 'month', parseInt(e.target.value))
+                      }
+                      className="w-full px-3 py-2 text-sm border rounded-md bg-background cursor-pointer"
+                    >
+                      {MONTH_NAMES_ID.map((name, idx) => (
+                        <option key={idx} value={idx}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            {/* Total Cost */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                Total Biaya
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Rp</span>
-                <input
-                  type="number"
-                  value={totalCost}
-                  onChange={(e) => setTotalCost(e.target.value)}
-                  placeholder="0"
-                  disabled={autoCalculate}
-                  className="flex-1 px-3 py-2 text-sm border rounded-md bg-background disabled:opacity-50"
-                  min="0"
-                />
-              </div>
-            </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Tahun
+                    </label>
+                    <select
+                      value={input.year}
+                      onChange={(e) =>
+                        updateInput(input.id, 'year', parseInt(e.target.value))
+                      }
+                      className="w-full px-3 py-2 text-sm border rounded-md bg-background cursor-pointer"
+                    >
+                      {yearOptions.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-            {/* Days in Month */}
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">
-                Hari dalam Bulan
-              </label>
-              <input
-                type="number"
-                value={daysInMonth}
-                onChange={(e) => setDaysInMonth(e.target.value)}
-                placeholder="30"
-                className="w-full px-3 py-2 text-sm border rounded-md bg-background"
-                min="1"
-                max="31"
-              />
-            </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Droplet className="h-3 w-3" />
+                    Volume Pemakaian
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={input.volumeM3}
+                      onChange={(e) =>
+                        updateInput(input.id, 'volumeM3', e.target.value)
+                      }
+                      placeholder="Contoh: 15"
+                      className="flex-1 px-3 py-2 text-sm border rounded-md bg-background"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className="text-sm text-muted-foreground">m³</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Preview */}
-        {volumeM3 && parseFloat(volumeM3) > 0 && (
-          <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-            <h4 className="font-medium text-sm mb-2">Preview Data</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-muted-foreground">Periode:</span>
-              <span className="font-medium">
-                {formatMonthDisplay(year, month)}
-              </span>
-
-              <span className="text-muted-foreground">Volume:</span>
-              <span className="font-medium">
-                {parseFloat(volumeM3).toFixed(2)} m³
-              </span>
-
-              <span className="text-muted-foreground">Total Biaya:</span>
-              <span className="font-medium">
-                {formatRupiah(parseFloat(totalCost) || 0)}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Info */}
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+          <p className="text-xs text-blue-900 dark:text-blue-200">
+            💡 <strong>Tips:</strong> Biaya air dihitung otomatis berdasarkan
+            tarif yang telah diatur. Pastikan tidak ada bulan yang duplikat.
+          </p>
+        </div>
 
         {/* Actions */}
         <div className="flex gap-3">
@@ -306,7 +268,7 @@ export function HistoryManualInput({
             Kembali
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid} className="flex-1">
-            Simpan Data
+            Simpan Semua Data
           </Button>
         </div>
       </CardContent>

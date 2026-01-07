@@ -30,6 +30,18 @@ export function InputMethodSelector({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Recommendation Banner */}
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+          <p className="text-xs text-blue-900 dark:text-blue-200">
+            💡 <strong>Rekomendasi:</strong> Gunakan data harian untuk prediksi
+            lebih akurat
+          </p>
+          <ul className="text-xs text-blue-800 dark:text-blue-300 mt-1 ml-4 space-y-0.5">
+            <li>• Data bulanan: akurasi ~85-90%</li>
+            <li>• Data harian: akurasi ~90-95%</li>
+          </ul>
+        </div>
+
         {/* Upload Option */}
         <button
           onClick={onSelectUpload}
@@ -40,10 +52,10 @@ export function InputMethodSelector({
               <Upload className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Upload File CSV</h3>
+              <h3 className="font-semibold mb-1">Upload File XLSX</h3>
               <p className="text-sm text-muted-foreground">
-                Import data dari file CSV atau Excel. Cocok untuk menambahkan
-                banyak data sekaligus.
+                Import data dari file Excel (.xlsx). Cocok untuk menambahkan
+                banyak data sekaligus. Mendukung format harian dan bulanan.
               </p>
             </div>
           </div>
@@ -59,10 +71,12 @@ export function InputMethodSelector({
               <PenLine className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Input Manual</h3>
+              <h3 className="font-semibold mb-1">
+                Input Manual (Beberapa Bulan)
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Masukkan data satu per satu secara manual. Cocok untuk
-                menambahkan data bulanan.
+                Masukkan data beberapa bulan sekaligus secara manual. Cocok
+                untuk menambahkan data bulanan dengan cepat.
               </p>
             </div>
           </div>

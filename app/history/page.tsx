@@ -9,7 +9,8 @@ import { InputMethodSelector } from '@/components/history/input-method-selector'
 import { HistoryTable } from '@/components/history/history-table';
 import { HistoryChart } from '@/components/history/history-chart';
 import { Button } from '@/components/ui/button';
-import { History, Home, Upload, Plus } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { History, Home, Upload, Plus, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import type { HistoryRecord, HistoryPricingSettings } from '@/types/history';
 import {
@@ -17,6 +18,11 @@ import {
   loadHistoryData,
   clearHistoryData,
 } from '@/lib/history';
+import {
+  triggerBackgroundTraining,
+  checkPendingProcessing,
+  markNeedsProcessing,
+} from '@/lib/history-training';
 
 type Step = 'view' | 'pricing' | 'select-method' | 'upload' | 'manual';
 
@@ -44,10 +50,16 @@ export default function HistoryPage() {
       return stored ? stored.pricingSettings : DEFAULT_PRICING;
     });
 
+  // Processing state
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('');
+  const [hasPendingProcessing, setHasPendingProcessing] = useState(false);
+
   // Set isClient on mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
+    setHasPendingProcessing(checkPendingProcessing());
   }, []);
 
   // Save data to localStorage when records change
@@ -64,8 +76,52 @@ export default function HistoryPage() {
     []
   );
 
+  const processData = async (newRecords: HistoryRecord[]) => {
+    setIsProcessing(true);
+    setProcessingMessage('Memproses data untuk prediksi...');
+
+    try {
+      const result = await triggerBackgroundTraining(newRecords);
+
+      if (result.success) {
+        setProcessingMessage('Data berhasil diproses!');
+        markNeedsProcessing(false);
+        setHasPendingProcessing(false);
+
+        // Show success for 2 seconds
+        setTimeout(() => {
+          setIsProcessing(false);
+          setProcessingMessage('');
+        }, 2000);
+      } else {
+        // Handle failure gracefully
+        setProcessingMessage(result.message);
+        markNeedsProcessing(true);
+        setHasPendingProcessing(true);
+
+        // Show error for 4 seconds
+        setTimeout(() => {
+          setIsProcessing(false);
+          setProcessingMessage('');
+        }, 4000);
+      }
+    } catch (error) {
+      console.error('Processing error:', error);
+      setProcessingMessage(
+        'Sistem sedang tidak dapat memproses data. Data Anda tetap tersimpan dan dapat dicoba lagi nanti.'
+      );
+      markNeedsProcessing(true);
+      setHasPendingProcessing(true);
+
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingMessage('');
+      }, 4000);
+    }
+  };
+
   const handleUploadComplete = useCallback(
-    (newRecords: HistoryRecord[]) => {
+    async (newRecords: HistoryRecord[]) => {
       // Merge new records with existing (avoid duplicates based on month)
       const existingMonths = new Set(records.map((r) => r.month));
       const uniqueNewRecords = newRecords.filter(
@@ -78,44 +134,51 @@ export default function HistoryPage() {
 
       setRecords(mergedRecords);
       setStep('view');
+
+      // Trigger background training
+      await processData(mergedRecords);
     },
     [records]
   );
 
   const handleManualSubmit = useCallback(
-    (newRecord: HistoryRecord) => {
-      // Check if record for this month already exists
-      const existingIndex = records.findIndex(
-        (r) => r.month === newRecord.month
+    async (newRecords: HistoryRecord[]) => {
+      // Merge with existing records
+      const existingMonthsMap = new Map(records.map((r) => [r.month, r]));
+
+      // Update or add new records
+      newRecords.forEach((newRecord) => {
+        existingMonthsMap.set(newRecord.month, newRecord);
+      });
+
+      const mergedRecords = Array.from(existingMonthsMap.values()).sort(
+        (a, b) => a.month.localeCompare(b.month)
       );
 
-      if (existingIndex >= 0) {
-        // Replace existing record
-        const updatedRecords = [...records];
-        updatedRecords[existingIndex] = newRecord;
-        setRecords(
-          updatedRecords.sort((a, b) => a.month.localeCompare(b.month))
-        );
-      } else {
-        // Add new record
-        setRecords((prev) =>
-          [...prev, newRecord].sort((a, b) => a.month.localeCompare(b.month))
-        );
-      }
-
+      setRecords(mergedRecords);
       setStep('view');
+
+      // Trigger background training
+      await processData(mergedRecords);
     },
     [records]
   );
 
-  const handleDeleteRecord = useCallback((id: string) => {
-    setRecords((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    if (confirm('Apakah Anda yakin ingin menghapus semua data historis?')) {
+  const handleClearAll = useCallback(async () => {
+    if (
+      confirm(
+        'Apakah Anda yakin ingin menghapus semua data historis dan prediksi?'
+      )
+    ) {
       setRecords([]);
       clearHistoryData();
+
+      // Clear forecast data
+      try {
+        await fetch('/api/clear-forecast', { method: 'DELETE' });
+      } catch (error) {
+        console.error('Failed to clear forecast:', error);
+      }
     }
   }, []);
 
@@ -175,6 +238,37 @@ export default function HistoryPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
+        {/* Pending Processing Banner */}
+        {hasPendingProcessing && step === 'view' && (
+          <Card className="mb-6 border-orange-500/50 bg-orange-50 dark:bg-orange-950/20">
+            <div className="p-4 flex items-start gap-3">
+              <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900">
+                <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-orange-900 dark:text-orange-200">
+                  Ada Data yang Perlu Diproses
+                </h4>
+                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                  Data Anda telah tersimpan, tetapi belum diproses untuk
+                  prediksi. Klik tombol di bawah untuk memproses data sekarang.
+                </p>
+                <Button
+                  onClick={async () => {
+                    if (records.length > 0) {
+                      await processData(records);
+                    }
+                  }}
+                  className="mt-3 bg-orange-600 hover:bg-orange-700 text-white"
+                  size="sm"
+                >
+                  Proses Sekarang
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {step === 'pricing' && (
           <div className="max-w-xl mx-auto">
             <HistoryPricingForm
@@ -244,16 +338,30 @@ export default function HistoryPage() {
                 <HistoryChart records={records} />
 
                 {/* Table */}
-                <HistoryTable
-                  records={records}
-                  onDelete={handleDeleteRecord}
-                  onClearAll={handleClearAll}
-                />
+                <HistoryTable records={records} onClearAll={handleClearAll} />
               </>
             )}
           </div>
         )}
       </main>
+
+      {/* Processing Overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="p-8 max-w-md mx-4">
+            <div className="text-center">
+              <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Memproses Data</h3>
+              <p className="text-muted-foreground">{processingMessage}</p>
+              {processingMessage.includes('Memproses') && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Mohon tunggu, proses ini dapat memakan waktu 30-60 detik
+                </p>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

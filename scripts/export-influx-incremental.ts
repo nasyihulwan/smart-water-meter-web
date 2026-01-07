@@ -7,57 +7,33 @@ import dotenv from 'dotenv';
 dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || '.env.local' });
 
 // CONFIG
-const DEVICE_ID = process.env.EXPORT_DEVICE_ID || 'water_meter_01';
+const DEVICE_ID = process.env.EXPORT_DEVICE_ID || 'default-device';
 const EXPORT_DIR = process.env.EXPORT_DIR || './data/exports';
 const EXPORT_FILE = path.join(EXPORT_DIR, `${DEVICE_ID}-water-readings.xlsx`);
 
-// Helper: Get last date from existing Excel file
-function getLastDateFromExcel(): string | null {
-  if (!fs.existsSync(EXPORT_FILE)) return null;
+// Helper: Get last timestamp from existing Excel file
+function getLastTimestampFromExcel(): number {
+  if (!fs.existsSync(EXPORT_FILE)) return 0;
 
   try {
     const workbook = XLSX.readFile(EXPORT_FILE);
     const sheetName = 'WaterReadings';
-    if (!workbook.Sheets[sheetName]) return null;
+    if (!workbook.Sheets[sheetName]) return 0;
 
-    const rows = XLSX.utils.sheet_to_json<{ Date: string }>(
+    const rows = XLSX.utils.sheet_to_json<{ Timestamp: string }>(
       workbook.Sheets[sheetName]
     );
-    if (rows.length === 0) return null;
+    if (rows.length === 0) return 0;
 
-    // Get the latest date from existing data
-    const dates = rows.map((r) => r.Date).filter((d) => d);
-    return dates.length > 0 ? dates[dates.length - 1] : null;
+    // Get the latest timestamp from existing data
+    const timestamps = rows
+      .map((r) => new Date(r.Timestamp).getTime())
+      .filter((t) => !isNaN(t));
+    return timestamps.length > 0 ? Math.max(...timestamps) : 0;
   } catch (err) {
     console.error('[WARN] Failed to read existing Excel file:', err);
-    return null;
+    return 0;
   }
-}
-
-// Helper: Format date as YY-MM-DD
-function formatDate(date: Date): string {
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-// Helper: Aggregate readings by day
-function aggregateByDay(
-  readings: Array<{ timestamp: Date; totalVolume: number; flowRate: number }>
-): Map<string, number> {
-  const dailyData = new Map<string, number>();
-
-  for (const reading of readings) {
-    const dateKey = formatDate(reading.timestamp);
-    const currentMax = dailyData.get(dateKey) || 0;
-    // Get max total_volume for each day
-    if (reading.totalVolume > currentMax) {
-      dailyData.set(dateKey, reading.totalVolume);
-    }
-  }
-
-  return dailyData;
 }
 
 // Helper: Ensure export directory exists
@@ -70,14 +46,17 @@ function ensureExportDir() {
 // Main export function
 async function exportIncremental() {
   ensureExportDir();
-  const lastDate = getLastDateFromExcel();
+  const lastTs = getLastTimestampFromExcel();
 
   console.log(
-    `[INFO] Last exported date: ${lastDate || 'none (export all data)'}`
+    `[INFO] Last exported timestamp: ${
+      lastTs ? new Date(lastTs).toISOString() : 'none (export all data)'
+    }`
   );
 
-  // Query all readings from InfluxDB
-  const range = '-10y'; // Query semua data
+  // Query all readings from InfluxDB (semua data yang ada)
+  // Jika ada timestamp terakhir, query dari sana. Jika tidak, query semua dari awal.
+  const range = lastTs > 0 ? new Date(lastTs).toISOString() : '-10y'; // Query semua data atau dari timestamp terakhir
 
   let readings;
   try {
@@ -89,44 +68,24 @@ async function exportIncremental() {
     process.exit(1);
   }
 
-  // Filter hanya data yang ada flow_rate nya
-  const validReadings = readings.filter((r) => r.flowRate > 0);
-  console.log(
-    `[INFO] Found ${validReadings.length} readings with flow_rate > 0`
-  );
+  // Filter hanya data baru (timestamp > lastTs)
+  const newReadings = readings.filter((r) => r.timestamp.getTime() > lastTs);
 
-  if (validReadings.length === 0) {
-    console.log('[INFO] No readings with flow_rate to export.');
+  if (newReadings.length === 0) {
+    console.log('[INFO] No new readings to export.');
     return;
   }
 
-  // Aggregate by day
-  const dailyData = aggregateByDay(validReadings);
-  console.log(`[INFO] Aggregated into ${dailyData.size} days`);
-
-  // Filter hanya data baru (date > lastDate)
-  const newDailyData = new Map<string, number>();
-  for (const [date, volume] of dailyData) {
-    if (!lastDate || date > lastDate) {
-      newDailyData.set(date, volume);
-    }
-  }
-
-  if (newDailyData.size === 0) {
-    console.log('[INFO] No new daily data to export.');
-    return;
-  }
-
-  console.log(`[INFO] Found ${newDailyData.size} new days to export`);
+  console.log(`[INFO] Found ${newReadings.length} new readings to export`);
 
   // Prepare worksheet data
-  const rows = Array.from(newDailyData.entries())
-    .sort((a, b) => a[0].localeCompare(b[0])) // Sort by date
-    .map(([date, totalM3]) => ({
-      Date: date,
-      Total_m3: totalM3,
-      Total_Litre: totalM3 * 1000,
-    }));
+  const rows = newReadings.map((r) => ({
+    Timestamp: r.timestamp.toISOString(),
+    DeviceID: r.deviceId,
+    FlowRate: r.flowRate,
+    TotalVolume: r.totalVolume,
+    SolenoidState: r.solenoidState ? 'ON' : 'OFF',
+  }));
 
   // Load or create workbook
   let workbook: XLSX.WorkBook;
@@ -159,7 +118,7 @@ async function exportIncremental() {
   XLSX.writeFile(workbook, EXPORT_FILE);
 
   console.log(
-    `[SUCCESS] Exported ${rows.length} new daily records to ${EXPORT_FILE}`
+    `[SUCCESS] Exported ${newReadings.length} new readings to ${EXPORT_FILE}`
   );
 }
 

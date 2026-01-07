@@ -91,11 +91,23 @@ export default function DashboardPage() {
     fetch('/api/forecast')
       .then((res) => res.json())
       .then((json) => {
-        if (json) {
+        // Validate that forecast data has required properties
+        if (
+          json &&
+          json.daily &&
+          json.monthly &&
+          Array.isArray(json.daily) &&
+          Array.isArray(json.monthly)
+        ) {
           setForecastData(json);
+        } else {
+          setForecastData(null);
         }
       })
-      .catch((err) => console.error('Failed to fetch forecast:', err))
+      .catch((err) => {
+        console.error('Failed to fetch forecast:', err);
+        setForecastData(null);
+      })
       .finally(() => setForecastLoading(false));
   }, []);
 
@@ -439,10 +451,48 @@ export default function DashboardPage() {
             </>
           ) : (
             <Card className="p-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Gagal memuat data prediksi. Silakan coba lagi nanti.
+              <div className="text-center py-12">
+                <div className="mx-auto mb-4 p-4 bg-muted/50 rounded-full w-fit">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-12 w-12 text-muted-foreground"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  Belum Ada Data yang Cukup untuk Diprediksi
+                </h3>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  Untuk menghasilkan prediksi konsumsi air, sistem memerlukan
+                  data historis. Silakan tambahkan data historis terlebih
+                  dahulu.
                 </p>
+                <Link href="/history">
+                  <button className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Tambah Data Historis
+                  </button>
+                </Link>
               </div>
             </Card>
           )}

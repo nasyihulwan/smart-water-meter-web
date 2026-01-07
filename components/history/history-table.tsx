@@ -3,13 +3,12 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Table, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import type { HistoryRecord } from '@/types/history';
 import { formatRupiah } from '@/lib/history';
 
 interface HistoryTableProps {
   records: HistoryRecord[];
-  onDelete?: (id: string) => void;
   onClearAll?: () => void;
 }
 
@@ -35,11 +34,7 @@ function SortIcon({
   );
 }
 
-export function HistoryTable({
-  records,
-  onDelete,
-  onClearAll,
-}: HistoryTableProps) {
+export function HistoryTable({ records, onClearAll }: HistoryTableProps) {
   const [sortField, setSortField] = useState<SortField>('month');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -205,7 +200,6 @@ export function HistoryTable({
                         />
                       </span>
                     </th>
-                    {onDelete && <th className="px-3 py-3 w-10"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -229,18 +223,6 @@ export function HistoryTable({
                       <td className="px-3 py-3 text-right text-muted-foreground hidden lg:table-cell">
                         {record.avgDailyUsage.toFixed(3)} m³
                       </td>
-                      {onDelete && (
-                        <td className="px-3 py-3">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => onDelete(record.id)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      )}
                     </tr>
                   ))}
                 </tbody>
