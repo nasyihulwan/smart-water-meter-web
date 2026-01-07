@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Table, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import type { HistoryRecord } from '@/types/history';
 import { formatRupiah } from '@/lib/history';
 
@@ -242,7 +242,6 @@ export function HistoryTable({ records, onClearAll }: HistoryTableProps) {
                       {formatRupiah(totals.totalCost)}
                     </td>
                     <td className="px-3 py-3 hidden lg:table-cell"></td>
-                    {onDelete && <td></td>}
                   </tr>
                 </tfoot>
               </table>
