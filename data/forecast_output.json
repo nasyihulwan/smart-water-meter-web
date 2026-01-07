@@ -1,0 +1,147 @@
+{
+  "daily": [
+    {
+      "date": "2025-12-31",
+      "volumeInLiters": 1448.2765735501237,
+      "volumeInLiters_lower": 1161.3732740441171,
+      "volumeInLiters_upper": 1718.4021192124012
+    },
+    {
+      "date": "2026-01-01",
+      "volumeInLiters": 1431.5602605658232,
+      "volumeInLiters_lower": 1162.119618150933,
+      "volumeInLiters_upper": 1695.5337067585033
+    },
+    {
+      "date": "2026-01-02",
+      "volumeInLiters": 1443.4248985604168,
+      "volumeInLiters_lower": 1175.2762612197564,
+      "volumeInLiters_upper": 1712.8981583920743
+    },
+    {
+      "date": "2026-01-03",
+      "volumeInLiters": 1739.4777115094469,
+      "volumeInLiters_lower": 1437.734137973824,
+      "volumeInLiters_upper": 2002.4135392274038
+    },
+    {
+      "date": "2026-01-04",
+      "volumeInLiters": 1723.948451121547,
+      "volumeInLiters_lower": 1432.7426043084822,
+      "volumeInLiters_upper": 2008.8055763380225
+    },
+    {
+      "date": "2026-01-05",
+      "volumeInLiters": 1417.9807473014664,
+      "volumeInLiters_lower": 1133.0893466008145,
+      "volumeInLiters_upper": 1686.7787190296053
+    },
+    {
+      "date": "2026-01-06",
+      "volumeInLiters": 1453.0698302936596,
+      "volumeInLiters_lower": 1157.641025695805,
+      "volumeInLiters_upper": 1729.5448697025042
+    },
+    {
+      "date": "2026-01-07",
+      "volumeInLiters": 1442.2867148578755,
+      "volumeInLiters_lower": 1148.1678117544498,
+      "volumeInLiters_upper": 1722.222954955774
+    },
+    {
+      "date": "2026-01-08",
+      "volumeInLiters": 1425.5704018736333,
+      "volumeInLiters_lower": 1146.356093508067,
+      "volumeInLiters_upper": 1714.2265795885937
+    },
+    {
+      "date": "2026-01-09",
+      "volumeInLiters": 1437.4350398681613,
+      "volumeInLiters_lower": 1148.415161269762,
+      "volumeInLiters_upper": 1717.886090205357
+    },
+    {
+      "date": "2026-01-10",
+      "volumeInLiters": 1733.487852817261,
+      "volumeInLiters_lower": 1429.9549718427181,
+      "volumeInLiters_upper": 2033.396838102344
+    },
+    {
+      "date": "2026-01-11",
+      "volumeInLiters": 1717.9585924290172,
+      "volumeInLiters_lower": 1435.6796518118383,
+      "volumeInLiters_upper": 2005.7681111576112
+    },
+    {
+      "date": "2026-01-12",
+      "volumeInLiters": 1411.9908886092448,
+      "volumeInLiters_lower": 1103.8858605944117,
+      "volumeInLiters_upper": 1701.0460650699129
+    },
+    {
+      "date": "2026-01-13",
+      "volumeInLiters": 1447.0799716014922,
+      "volumeInLiters_lower": 1156.183248175966,
+      "volumeInLiters_upper": 1752.3167029056535
+    },
+    {
+      "date": "2026-01-14",
+      "volumeInLiters": 1436.2968561655964,
+      "volumeInLiters_lower": 1142.1852958650845,
+      "volumeInLiters_upper": 1728.523237102109
+    },
+    {
+      "date": "2026-01-15",
+      "volumeInLiters": 1419.5805431811955,
+      "volumeInLiters_lower": 1082.4392590487726,
+      "volumeInLiters_upper": 1704.972117308853
+    },
+    {
+      "date": "2026-01-16",
+      "volumeInLiters": 1431.4451811762906,
+      "volumeInLiters_lower": 1132.8370664135673,
+      "volumeInLiters_upper": 1720.6693159384893
+    }
+  ],
+  "weekly": [
+    {
+      "week": "2025-12-29/2026-01-04",
+      "volumeInLiters": 7786.687895307357,
+      "volumeInLiters_lower": 6369.245895697113,
+      "volumeInLiters_upper": 9138.053099928406
+    },
+    {
+      "week": "2026-01-05/2026-01-11",
+      "volumeInLiters": 10627.789179441075,
+      "volumeInLiters_lower": 8599.304062483454,
+      "volumeInLiters_upper": 12609.82416274179
+    },
+    {
+      "week": "2026-01-12/2026-01-18",
+      "volumeInLiters": 7146.393440733819,
+      "volumeInLiters_lower": 5617.530730097802,
+      "volumeInLiters_upper": 8607.527438325018
+    }
+  ],
+  "monthly": [
+    {
+      "month": "2025-12",
+      "volumeInLiters": 1448.2765735501237,
+      "volumeInLiters_lower": 1161.3732740441171,
+      "volumeInLiters_upper": 1718.4021192124012
+    },
+    {
+      "month": "2026-01",
+      "volumeInLiters": 24112.59394193213,
+      "volumeInLiters_lower": 19424.707414234254,
+      "volumeInLiters_upper": 28637.00258178281
+    }
+  ],
+  "metadata": {
+    "model": "Prophet",
+    "trained_on": "2025-12-30",
+    "prediction_date": "2026-01-06",
+    "unit": "liters",
+    "note": "Use Next.js calculateTotalBill(volumeInLiters, settings) for cost calculation"
+  }
+}
