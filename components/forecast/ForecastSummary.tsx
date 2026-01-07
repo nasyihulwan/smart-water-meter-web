@@ -7,6 +7,7 @@ import type { PricingSettings } from '@/types/pricing';
 import {
   calculateTotalBill,
   formatRupiah,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   calculateWaterCost,
 } from '@/lib/pricing';
 import {
