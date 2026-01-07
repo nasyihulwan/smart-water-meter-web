@@ -71,6 +71,7 @@ export function WataboyChat() {
     if (!content.trim()) return;
 
     const userMessage: Message = {
+      // eslint-disable-next-line react-hooks/purity
       id: Date.now().toString(),
       content: content.trim(),
       role: 'user',
@@ -172,7 +173,7 @@ export function WataboyChat() {
       {/* Chat Window */}
       <div
         className={cn(
-          'fixed bottom-24 right-6 z-50 w-[400px] h-[560px]',
+          'fixed bottom-24 right-6 z-50 w-100 h-140',
           'transition-all duration-500 ease-out',
           'origin-bottom-right',
           isOpen && !isMinimized

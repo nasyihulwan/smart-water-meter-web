@@ -8,6 +8,11 @@ import {
   PricingSettingsCard,
   loadPricingSettings,
 } from '@/components/dashboard/pricing-settings';
+import {
+  ForecastChart,
+  ForecastSummary,
+  ForecastControls,
+} from '@/components/forecast';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Droplet, Gauge, Home, History } from 'lucide-react';
 import Link from 'next/link';
@@ -17,6 +22,7 @@ import { Power } from 'lucide-react';
 
 import type { WaterReading } from '@/lib/influxdb';
 import type { PricingSettings } from '@/types/pricing';
+import type { ForecastData, ForecastPeriod } from '@/types/forecast';
 import { DEFAULT_PRICING_SETTINGS } from '@/types/pricing';
 
 interface DashboardData {
@@ -37,6 +43,9 @@ export default function DashboardPage() {
   const [liveData, setLiveData] = useState<WaterReading[]>([]);
   const [historicalData, setHistoricalData] = useState<WaterReading[]>([]);
   const [loading, setLoading] = useState(true);
+  const [forecastData, setForecastData] = useState<ForecastData | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(true);
+  const [forecastPeriod, setForecastPeriod] = useState<ForecastPeriod>('daily');
   const [pricingSettings, setPricingSettings] = useState<PricingSettings>(
     () => {
       // Initialize from localStorage if available (SSR safe)
@@ -75,6 +84,20 @@ export default function DashboardPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   };
+
+  // Fetch forecast data
+  useEffect(() => {
+    setForecastLoading(true);
+    fetch('/api/forecast')
+      .then((res) => res.json())
+      .then((json) => {
+        if (json) {
+          setForecastData(json);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch forecast:', err))
+      .finally(() => setForecastLoading(false));
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -305,6 +328,57 @@ export default function DashboardPage() {
         {/* Pricing Settings Section */}
         <div className="mt-8">
           <PricingSettingsCard onSettingsChange={handlePricingSettingsChange} />
+        </div>
+
+        {/* Forecast Section */}
+        <div className="mt-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <div>
+              <h3 className="text-2xl font-bold">Prediksi Konsumsi Air</h3>
+              <p className="text-muted-foreground text-sm">
+                Powered by Prophet ML Model
+              </p>
+            </div>
+            <ForecastControls
+              activePeriod={forecastPeriod}
+              onPeriodChange={setForecastPeriod}
+            />
+          </div>
+
+          {forecastLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Memuat prediksi...
+                </p>
+              </div>
+            </div>
+          ) : forecastData ? (
+            <>
+              <ForecastSummary
+                forecastData={forecastData}
+                pricingSettings={pricingSettings}
+              />
+
+              <div className="mt-6">
+                <Card className="p-6">
+                  <ForecastChart
+                    data={forecastData[forecastPeriod] || []}
+                    period={forecastPeriod}
+                  />
+                </Card>
+              </div>
+            </>
+          ) : (
+            <Card className="p-6">
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Gagal memuat data prediksi. Silakan coba lagi nanti.
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
       </main>
     </div>
