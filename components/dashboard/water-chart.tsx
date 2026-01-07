@@ -204,7 +204,7 @@ export function WaterChart({
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             mode === 'historical' && timeRange === '30d'
               ? 'bg-blue-600 text-white'
-              : 'bg-muted text-muted-foreground hover: bg-muted/80'
+              : 'text-muted-foreground hover: bg-muted/80'
           }`}
         >
           1 Bulan
@@ -212,13 +212,13 @@ export function WaterChart({
       </div>
 
       {chartData.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center border rounded-lg bg-muted/20 min-h-[300px]">
+        <div className="flex-1 flex items-center justify-center border rounded-lg bg-muted/20 min-h-75">
           <p className="text-muted-foreground text-sm">
             {mode === 'live' ? 'Menunggu aliran air.. .' : 'Tidak ada data'}
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-[300px]" style={{ width: '100%' }}>
+        <div className="flex-1 min-h-75" style={{ width: '100%' }}>
           <ResponsiveContainer>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
