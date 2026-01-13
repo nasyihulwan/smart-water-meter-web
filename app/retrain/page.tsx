@@ -17,13 +17,8 @@ import {
   ArrowLeft,
   Download,
   Upload,
-  History,
   Database,
   RefreshCw,
-  Trash2,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
   Package,
   Cog,
@@ -32,11 +27,7 @@ import {
   Rocket,
 } from 'lucide-react';
 import { parseXLSX, validateUploadedData } from '@/lib/retrain-utils';
-import type {
-  TrainingStatus,
-  TrainingResult,
-  HistoricalUpload,
-} from '@/types/retrain';
+import type { TrainingStatus, TrainingResult } from '@/types/retrain';
 
 export default function RetrainPage() {
   const router = useRouter();
@@ -62,9 +53,6 @@ export default function RetrainPage() {
     null
   );
   const [activeTab, setActiveTab] = useState('upload');
-  const [historicalUploads, setHistoricalUploads] = useState<
-    HistoricalUpload[]
-  >([]);
   const [isUploading, setIsUploading] = useState(false);
   const [currentUploadId, setCurrentUploadId] = useState<string | null>(null);
   const [includeInfluxData, setIncludeInfluxData] = useState(true);
@@ -72,23 +60,6 @@ export default function RetrainPage() {
   const [exportFormat, setExportFormat] = useState<'daily' | 'monthly'>(
     'daily'
   );
-
-  // Load historical uploads
-  useEffect(() => {
-    loadHistoricalUploads();
-  }, []);
-
-  const loadHistoricalUploads = async () => {
-    try {
-      const response = await fetch('/data/historical/metadata.json');
-      if (response.ok) {
-        const data = await response.json();
-        setHistoricalUploads(data);
-      }
-    } catch (err) {
-      console.error('Failed to load historical uploads:', err);
-    }
-  };
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -127,12 +98,18 @@ export default function RetrainPage() {
 
       const result = await response.json();
 
+      if (response.status === 409 && result.existingUpload) {
+        // File already uploaded, use existing upload id
+        setCurrentUploadId(result.existingUpload.id);
+        alert('ℹ️ File already uploaded, using previous upload.');
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(result.error || 'Upload failed');
       }
 
       setCurrentUploadId(result.upload.id);
-      await loadHistoricalUploads();
       alert('✅ File uploaded successfully!');
     } catch (err) {
       alert(
@@ -224,8 +201,6 @@ export default function RetrainPage() {
         metrics: result.metrics,
         forecastSummary: result.forecastSummary,
       });
-
-      await loadHistoricalUploads();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 
@@ -270,11 +245,6 @@ Then try again.`);
     });
     setTrainingResult(null);
     setCurrentUploadId(null);
-  };
-
-  const getLastTrainingDate = () => {
-    const trained = historicalUploads.find((u) => u.status === 'trained');
-    return trained ? new Date(trained.uploadedAt).toLocaleDateString() : null;
   };
 
   const workflowSteps = [
@@ -343,18 +313,13 @@ Then try again.`);
               predictions
             </p>
           </div>
-          {getLastTrainingDate() && (
-            <Badge variant="secondary" className="w-fit">
-              Last trained: {getLastTrainingDate()}
-            </Badge>
-          )}
         </div>
       </div>
 
       {/* Data Input Tabs */}
       <Card className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="upload">
               <Upload className="mr-2 h-4 w-4" />
               Manual Upload
@@ -362,10 +327,6 @@ Then try again.`);
             <TabsTrigger value="export">
               <Database className="mr-2 h-4 w-4" />
               Export from InfluxDB
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              <History className="mr-2 h-4 w-4" />
-              Historical Uploads
             </TabsTrigger>
           </TabsList>
 
@@ -467,107 +428,6 @@ Then try again.`);
                 Export & Download
               </Button>
             </div>
-          </TabsContent>
-
-          {/* Tab 3: Historical Uploads */}
-          <TabsContent value="history" className="mt-6">
-            {historicalUploads.length === 0 ? (
-              <div className="text-center py-12">
-                <History className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  No historical uploads yet. Upload your first dataset above.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Filename
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Type
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Rows
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Date Range
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {historicalUploads.map((upload) => (
-                      <tr key={upload.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-3 text-sm">
-                          {new Date(upload.uploadedAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm">{upload.filename}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <Badge variant="secondary">{upload.dataType}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm">{upload.rowCount}</td>
-                        <td className="px-4 py-3 text-sm">
-                          {upload.dateRange.start} → {upload.dateRange.end}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <Badge
-                            variant={
-                              upload.status === 'trained'
-                                ? 'default'
-                                : upload.status === 'failed'
-                                ? 'destructive'
-                                : 'secondary'
-                            }
-                          >
-                            {upload.status === 'uploaded' && (
-                              <Upload className="mr-1 h-3 w-3" />
-                            )}
-                            {upload.status === 'training' && (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            )}
-                            {upload.status === 'trained' && (
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                            )}
-                            {upload.status === 'failed' && (
-                              <AlertCircle className="mr-1 h-3 w-3" />
-                            )}
-                            {upload.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setCurrentUploadId(upload.id)}
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </TabsContent>
         </Tabs>
       </Card>

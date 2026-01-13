@@ -10,7 +10,14 @@ import { HistoryTable } from '@/components/history/history-table';
 import { HistoryChart } from '@/components/history/history-chart';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { History, Home, Upload, Plus, AlertCircle } from 'lucide-react';
+import {
+  History,
+  Home,
+  Upload,
+  Plus,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react';
 import Link from 'next/link';
 import type { HistoryRecord, HistoryPricingSettings } from '@/types/history';
 import {
@@ -230,6 +237,12 @@ export default function HistoryPage() {
                   Tambah Data
                 </Button>
               )}
+              <Link href="/retrain">
+                <Button variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retrain
+                </Button>
+              </Link>
               <ThemeToggle />
             </div>
           </div>

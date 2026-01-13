@@ -88,15 +88,13 @@ export async function POST(request: NextRequest) {
     upload.status = 'training';
     saveMetadata(metadata);
 
-    // Find the uploaded file
-    const files = fs.readdirSync(UPLOAD_DIR);
-    const uploadFile = files.find((f) =>
-      f.includes(upload.uploadedAt.split('T')[0].replace(/-/g, ''))
-    );
-
-    if (!uploadFile) {
+    // Use the filename saved in metadata (from upload API)
+    const uploadPath = path.join(UPLOAD_DIR, upload.filename);
+    if (!fs.existsSync(uploadPath)) {
       console.error(
-        `${getCurrentTimestamp()} [RETRAIN] Upload file not found for: ${uploadId}`
+        `${getCurrentTimestamp()} [RETRAIN] Upload file not found for: ${uploadId} (filename: ${
+          upload.filename
+        })`
       );
       upload.status = 'failed';
       saveMetadata(metadata);
@@ -106,15 +104,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadPath = path.join(UPLOAD_DIR, uploadFile);
-
-    // Read uploaded file
-    const workbook = XLSX.readFile(uploadPath);
+    // Read uploaded file using buffer for better compatibility
+    const fileBuffer = fs.readFileSync(uploadPath);
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
-    const historicalData = XLSX.utils.sheet_to_json<{
-      date: string;
+    const rawData = XLSX.utils.sheet_to_json<{
+      date: string | number;
       total_m3: number;
     }>(workbook.Sheets[sheetName]);
+
+    // Convert Excel serial dates to string format (YYYY-MM-DD or YYYY-MM)
+    const historicalData = rawData.map((row) => {
+      let dateStr: string;
+      if (typeof row.date === 'number') {
+        // Excel serial date - convert to JS Date then to string
+        const excelDate = XLSX.SSF.parse_date_code(row.date);
+        if (excelDate) {
+          const year = excelDate.y;
+          const month = String(excelDate.m).padStart(2, '0');
+          const day = String(excelDate.d).padStart(2, '0');
+          dateStr = `${year}-${month}-${day}`;
+        } else {
+          dateStr = String(row.date);
+        }
+      } else {
+        dateStr = String(row.date).trim();
+      }
+      return { date: dateStr, total_m3: row.total_m3 };
+    });
 
     console.log(
       `${getCurrentTimestamp()} [RETRAIN] Loaded ${
@@ -168,6 +185,38 @@ export async function POST(request: NextRequest) {
       `${getCurrentTimestamp()} [RETRAIN] Training in progress... (estimated 60s)`
     );
 
+    // Create XLSX file from combined data for Python server
+    const wsData = [
+      ['date', 'total_m3'],
+      ...uniqueData.map((row) => [row.date, row.total_m3]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    const xlsxBuffer = XLSX.write(wb, {
+      type: 'buffer',
+      bookType: 'xlsx',
+    }) as Buffer;
+
+    // Create multipart form data manually for Node.js compatibility
+    const boundary =
+      '----FormBoundary' + Math.random().toString(36).substring(2);
+    const CRLF = '\r\n';
+
+    const header = [
+      `--${boundary}`,
+      `Content-Disposition: form-data; name="file"; filename="training_data.xlsx"`,
+      `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`,
+      '',
+      '',
+    ].join(CRLF);
+
+    const footer = CRLF + `--${boundary}--` + CRLF;
+
+    const headerBuffer = Buffer.from(header, 'utf-8');
+    const footerBuffer = Buffer.from(footer, 'utf-8');
+    const bodyBuffer = Buffer.concat([headerBuffer, xlsxBuffer, footerBuffer]);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TRAINING_TIMEOUT);
 
@@ -176,9 +225,9 @@ export async function POST(request: NextRequest) {
       response = await fetch(`${PYTHON_SERVER_URL}/api/train`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
         },
-        body: JSON.stringify({ data: uniqueData }),
+        body: bodyBuffer,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);

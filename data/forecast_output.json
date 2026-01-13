@@ -2,238 +2,238 @@
   "daily": [
     {
       "date": "2026-01-01",
-      "volumeInLiters": 1144.7679134392706,
-      "volumeInLiters_lower": 796.0944985042578,
-      "volumeInLiters_upper": 1453.2285055013851
+      "volumeInLiters": 1100.989375759528,
+      "volumeInLiters_lower": 789.7687118948284,
+      "volumeInLiters_upper": 1416.9357787798494
     },
     {
       "date": "2026-01-02",
-      "volumeInLiters": 1111.1408412544436,
-      "volumeInLiters_lower": 737.5726681421111,
-      "volumeInLiters_upper": 1459.2797655777158
+      "volumeInLiters": 1077.1143282525134,
+      "volumeInLiters_lower": 759.4819347230969,
+      "volumeInLiters_upper": 1420.1047061358158
     },
     {
       "date": "2026-01-03",
-      "volumeInLiters": 1305.585003815255,
-      "volumeInLiters_lower": 938.3305324046204,
-      "volumeInLiters_upper": 1629.1286985155753
+      "volumeInLiters": 1290.2635594238664,
+      "volumeInLiters_lower": 952.7203823475239,
+      "volumeInLiters_upper": 1607.1526449637283
     },
     {
       "date": "2026-01-04",
-      "volumeInLiters": 1347.1990183609091,
-      "volumeInLiters_lower": 976.5761882370463,
-      "volumeInLiters_upper": 1684.3570208231993
+      "volumeInLiters": 1289.2042110131704,
+      "volumeInLiters_lower": 958.4359046384475,
+      "volumeInLiters_upper": 1624.0808923214167
     },
     {
       "date": "2026-01-05",
-      "volumeInLiters": 1084.711631047823,
-      "volumeInLiters_lower": 721.9341527737602,
-      "volumeInLiters_upper": 1426.8013213477643
+      "volumeInLiters": 1077.049007725235,
+      "volumeInLiters_lower": 719.0877553965057,
+      "volumeInLiters_upper": 1408.388916811137
     },
     {
       "date": "2026-01-06",
-      "volumeInLiters": 1116.1976206739307,
-      "volumeInLiters_lower": 747.5347388489797,
-      "volumeInLiters_upper": 1460.7533781687737
+      "volumeInLiters": 1105.5351677175229,
+      "volumeInLiters_lower": 732.836096796227,
+      "volumeInLiters_upper": 1445.257784519616
     },
     {
       "date": "2026-01-07",
-      "volumeInLiters": 1094.380080143322,
-      "volumeInLiters_lower": 707.1311124429421,
-      "volumeInLiters_upper": 1438.1445828174285
+      "volumeInLiters": 1053.0766264075748,
+      "volumeInLiters_lower": 671.465891329578,
+      "volumeInLiters_upper": 1412.2183712456506
     },
     {
       "date": "2026-01-08",
-      "volumeInLiters": 1111.7516232573348,
-      "volumeInLiters_lower": 739.3167198821119,
-      "volumeInLiters_upper": 1454.9979003813316
+      "volumeInLiters": 1066.1157437949082,
+      "volumeInLiters_lower": 689.642360169876,
+      "volumeInLiters_upper": 1405.742198273037
     },
     {
       "date": "2026-01-09",
-      "volumeInLiters": 1078.1245510722542,
-      "volumeInLiters_lower": 682.5261211152739,
-      "volumeInLiters_upper": 1423.8106404143757
+      "volumeInLiters": 1042.2406962877542,
+      "volumeInLiters_lower": 676.0207643976753,
+      "volumeInLiters_upper": 1376.1889496072013
     },
     {
       "date": "2026-01-10",
-      "volumeInLiters": 1272.568713633234,
-      "volumeInLiters_lower": 879.8352784713417,
-      "volumeInLiters_upper": 1631.226243359658
+      "volumeInLiters": 1255.3899274592025,
+      "volumeInLiters_lower": 857.1874695357519,
+      "volumeInLiters_upper": 1598.6672074653504
     },
     {
       "date": "2026-01-11",
-      "volumeInLiters": 1314.1827281786063,
-      "volumeInLiters_lower": 911.9490448518841,
-      "volumeInLiters_upper": 1682.0200774744828
+      "volumeInLiters": 1254.33057904822,
+      "volumeInLiters_lower": 897.5897660330374,
+      "volumeInLiters_upper": 1613.9736121540398
     },
     {
       "date": "2026-01-12",
-      "volumeInLiters": 1051.6953408657764,
-      "volumeInLiters_lower": 629.9806600947658,
-      "volumeInLiters_upper": 1430.448230241119
+      "volumeInLiters": 1042.1753757606339,
+      "volumeInLiters_lower": 674.1890606648068,
+      "volumeInLiters_upper": 1401.3315308359165
     },
     {
       "date": "2026-01-13",
-      "volumeInLiters": 1083.181330491918,
-      "volumeInLiters_lower": 698.4063022763335,
-      "volumeInLiters_upper": 1477.025473699285
+      "volumeInLiters": 1070.6615357528883,
+      "volumeInLiters_lower": 691.2417387545266,
+      "volumeInLiters_upper": 1448.6285832117528
     },
     {
       "date": "2026-01-14",
-      "volumeInLiters": 1061.3637899611972,
-      "volumeInLiters_lower": 629.9969211132154,
-      "volumeInLiters_upper": 1455.1961206241651
+      "volumeInLiters": 1018.202994442869,
+      "volumeInLiters_lower": 599.9131419762994,
+      "volumeInLiters_upper": 1375.7604079938092
     },
     {
       "date": "2026-01-15",
-      "volumeInLiters": 1078.7353330749802,
-      "volumeInLiters_lower": 658.9600124945167,
-      "volumeInLiters_upper": 1479.5012659117378
+      "volumeInLiters": 1031.2421118300438,
+      "volumeInLiters_lower": 633.0336690865036,
+      "volumeInLiters_upper": 1411.3781223354526
     },
     {
       "date": "2026-01-16",
-      "volumeInLiters": 1045.108260890602,
-      "volumeInLiters_lower": 601.4272890698687,
-      "volumeInLiters_upper": 1436.8086191246543
+      "volumeInLiters": 1007.367064323415,
+      "volumeInLiters_lower": 607.6577159003499,
+      "volumeInLiters_upper": 1415.0069066126869
     },
     {
       "date": "2026-01-17",
-      "volumeInLiters": 1239.552423450695,
-      "volumeInLiters_lower": 831.163790006105,
-      "volumeInLiters_upper": 1647.0394409515534
+      "volumeInLiters": 1220.5162954941122,
+      "volumeInLiters_lower": 834.8859088697805,
+      "volumeInLiters_upper": 1654.4641639617143
     },
     {
       "date": "2026-01-18",
-      "volumeInLiters": 1281.1664379965293,
-      "volumeInLiters_lower": 834.0337387688592,
-      "volumeInLiters_upper": 1683.8975323078591
+      "volumeInLiters": 1219.4569470835213,
+      "volumeInLiters_lower": 811.6622873183113,
+      "volumeInLiters_upper": 1617.8279066791988
     },
     {
       "date": "2026-01-19",
-      "volumeInLiters": 1018.6790506837305,
-      "volumeInLiters_lower": 556.6334690826657,
-      "volumeInLiters_upper": 1425.8107942004826
+      "volumeInLiters": 1007.3017437960325,
+      "volumeInLiters_lower": 610.0583156006967,
+      "volumeInLiters_upper": 1432.5395782089706
     },
     {
       "date": "2026-01-20",
-      "volumeInLiters": 1050.165040309893,
-      "volumeInLiters_lower": 593.6915492214102,
-      "volumeInLiters_upper": 1501.2694776326439
+      "volumeInLiters": 1035.78790378815,
+      "volumeInLiters_lower": 574.2936746907762,
+      "volumeInLiters_upper": 1432.329082126029
     },
     {
       "date": "2026-01-21",
-      "volumeInLiters": 1028.3474997791818,
-      "volumeInLiters_lower": 559.2152591939066,
-      "volumeInLiters_upper": 1461.2880072683843
+      "volumeInLiters": 983.3293624781735,
+      "volumeInLiters_lower": 548.7658411070944,
+      "volumeInLiters_upper": 1416.4051803936266
     },
     {
       "date": "2026-01-22",
-      "volumeInLiters": 1045.7190428932897,
-      "volumeInLiters_lower": 589.4840555985937,
-      "volumeInLiters_upper": 1476.6665708343357
+      "volumeInLiters": 996.3684798655954,
+      "volumeInLiters_lower": 551.3029286842493,
+      "volumeInLiters_upper": 1421.5174564363367
     },
     {
       "date": "2026-01-23",
-      "volumeInLiters": 1012.0919707084129,
-      "volumeInLiters_lower": 548.4826362962518,
-      "volumeInLiters_upper": 1465.4914610819867
+      "volumeInLiters": 972.493432358656,
+      "volumeInLiters_lower": 498.24788076191527,
+      "volumeInLiters_upper": 1412.402480960495
     },
     {
       "date": "2026-01-24",
-      "volumeInLiters": 1206.5361332686737,
-      "volumeInLiters_lower": 726.3611400666432,
-      "volumeInLiters_upper": 1653.1222716936352
+      "volumeInLiters": 1185.6426635294479,
+      "volumeInLiters_lower": 731.8424079967859,
+      "volumeInLiters_upper": 1627.7614454170334
     },
     {
       "date": "2026-01-25",
-      "volumeInLiters": 1248.1501478142268,
-      "volumeInLiters_lower": 771.4444120807157,
-      "volumeInLiters_upper": 1710.8862454575226
+      "volumeInLiters": 1184.5833151185707,
+      "volumeInLiters_lower": 709.7051451946289,
+      "volumeInLiters_upper": 1610.6640766648866
     },
     {
       "date": "2026-01-26",
-      "volumeInLiters": 985.6627605015526,
-      "volumeInLiters_lower": 475.0457007170867,
-      "volumeInLiters_upper": 1415.4620581008487
+      "volumeInLiters": 972.4281118312347,
+      "volumeInLiters_lower": 485.1848157889587,
+      "volumeInLiters_upper": 1434.893290516493
     },
     {
       "date": "2026-01-27",
-      "volumeInLiters": 1017.1487501278928,
-      "volumeInLiters_lower": 508.1187907685843,
-      "volumeInLiters_upper": 1479.4828716273164
+      "volumeInLiters": 1000.9142718236192,
+      "volumeInLiters_lower": 513.4446023172457,
+      "volumeInLiters_upper": 1468.5308543576507
     },
     {
       "date": "2026-01-28",
-      "volumeInLiters": 995.3312095970966,
-      "volumeInLiters_lower": 499.19688044955217,
-      "volumeInLiters_upper": 1440.2631879120388
+      "volumeInLiters": 948.4557305135586,
+      "volumeInLiters_lower": 468.49380719247654,
+      "volumeInLiters_upper": 1435.9941231284774
     },
     {
       "date": "2026-01-29",
-      "volumeInLiters": 1012.7027527109351,
-      "volumeInLiters_lower": 521.2712240430202,
-      "volumeInLiters_upper": 1491.638987110493
+      "volumeInLiters": 961.4948479007309,
+      "volumeInLiters_lower": 473.44120371564406,
+      "volumeInLiters_upper": 1402.236220999783
     },
     {
       "date": "2026-01-30",
-      "volumeInLiters": 979.0756805262239,
-      "volumeInLiters_lower": 464.73411131723657,
-      "volumeInLiters_upper": 1476.3361724450854
+      "volumeInLiters": 937.6198003938973,
+      "volumeInLiters_lower": 420.7002962974412,
+      "volumeInLiters_upper": 1394.0959690248694
     }
   ],
   "weekly": [
     {
       "week": "2025-12-29/2026-01-04",
-      "volumeInLiters": 4908.692776869879,
-      "volumeInLiters_lower": 3448.5738872880356,
-      "volumeInLiters_upper": 6225.9939904178755
+      "volumeInLiters": 4757.571474449078,
+      "volumeInLiters_lower": 3460.4069336038965,
+      "volumeInLiters_upper": 6068.274022200811
     },
     {
       "week": "2026-01-05/2026-01-11",
-      "volumeInLiters": 8071.916948006505,
-      "volumeInLiters_lower": 5390.227168386294,
-      "volumeInLiters_upper": 10517.754143963815
+      "volumeInLiters": 7853.737748440418,
+      "volumeInLiters_lower": 5243.830103658652,
+      "volumeInLiters_upper": 10260.437040076033
     },
     {
       "week": "2026-01-12/2026-01-18",
-      "volumeInLiters": 7840.802916731698,
-      "volumeInLiters_lower": 4883.968713823664,
-      "volumeInLiters_upper": 10609.916682860374
+      "volumeInLiters": 7609.622324687483,
+      "volumeInLiters_lower": 4852.583522570578,
+      "volumeInLiters_upper": 10324.397621630531
     },
     {
       "week": "2026-01-19/2026-01-25",
-      "volumeInLiters": 7609.688885457408,
-      "volumeInLiters_lower": 4345.312521540187,
-      "volumeInLiters_upper": 10694.534828168991
+      "volumeInLiters": 7365.506900934626,
+      "volumeInLiters_lower": 4224.216194036147,
+      "volumeInLiters_upper": 10353.619300207378
     },
     {
       "week": "2026-01-26/2026-02-01",
-      "volumeInLiters": 4989.921153463701,
-      "volumeInLiters_lower": 2468.36670729548,
-      "volumeInLiters_upper": 7303.1832771957825
+      "volumeInLiters": 4820.912762463041,
+      "volumeInLiters_lower": 2361.264725311766,
+      "volumeInLiters_upper": 7135.750458027273
     }
   ],
   "monthly": [
     {
       "month": "2026-01",
-      "volumeInLiters": 33421.02268052919,
-      "volumeInLiters_lower": 20536.44899833366,
-      "volumeInLiters_upper": 45351.382922606834
+      "volumeInLiters": 32407.351210974644,
+      "volumeInLiters_lower": 20142.30147918104,
+      "volumeInLiters_upper": 44142.478442142026
     }
   ],
   "metadata": {
     "model": "Prophet",
-    "trained_on": "2026-01-08",
+    "trained_on": "2026-01-13",
     "last_data_date": "2025-12-31",
-    "prediction_date": "2026-01-08",
+    "prediction_date": "2026-01-13",
     "forecast_start": "2026-01-01",
     "forecast_end": "2026-01-30",
     "unit": "liters",
     "data_type": "monthly",
     "evaluation": {
-      "mae": 303.15598601693716,
-      "rmse": 321.5831573678354,
-      "mape": 18.3130302840092,
+      "mae": 339.51216416148037,
+      "rmse": 356.6484232631078,
+      "mape": 20.3660488809068,
       "train_size": 220,
       "test_size": 55
     },

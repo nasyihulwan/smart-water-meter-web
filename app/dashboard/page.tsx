@@ -14,7 +14,7 @@ import {
   ForecastControls,
 } from '@/components/forecast';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Droplet, Gauge, Home, History } from 'lucide-react';
+import { Droplet, Gauge, Home, History, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -203,6 +203,12 @@ export default function DashboardPage() {
               <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent transition-colors">
                 <History className="h-4 w-4" />
                 <span className="hidden sm:inline">Historis</span>
+              </button>
+            </Link>
+            <Link href="/retrain">
+              <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-accent transition-colors">
+                <RefreshCw className="h-4 w-4" />
+                <span className="hidden sm:inline">Retrain</span>
               </button>
             </Link>
             <ThemeToggle />

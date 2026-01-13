@@ -59,17 +59,24 @@ export async function POST(request: NextRequest) {
     ensureUploadDir();
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file');
 
     if (!file) {
       console.error(`${getCurrentTimestamp()} [UPLOAD] No file provided`);
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    // Support both File and Blob (Node.js: Blob, browser: File)
+    // @ts-ignore
+    const fileName = file.name || 'uploaded.xlsx';
+    // @ts-ignore
+    const fileSize =
+      typeof file.size === 'number' ? file.size : file._size || 0;
+
     // Validate file type
-    if (!file.name.endsWith('.xlsx')) {
+    if (!fileName.endsWith('.xlsx')) {
       console.error(
-        `${getCurrentTimestamp()} [UPLOAD] Invalid file type: ${file.name}`
+        `${getCurrentTimestamp()} [UPLOAD] Invalid file type: ${fileName}`
       );
       return NextResponse.json(
         { error: 'Only .xlsx files allowed' },
@@ -78,14 +85,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size
-    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
     console.log(
-      `${getCurrentTimestamp()} [UPLOAD] Receiving file: ${
-        file.name
-      } (${fileSizeMB} MB)`
+      `${getCurrentTimestamp()} [UPLOAD] Receiving file: ${fileName} (${fileSizeMB} MB)`
     );
 
-    if (file.size > MAX_FILE_SIZE) {
+    if (fileSize > MAX_FILE_SIZE) {
       console.error(
         `${getCurrentTimestamp()} [UPLOAD] File too large: ${fileSizeMB}MB`
       );
@@ -178,7 +183,7 @@ export async function POST(request: NextRequest) {
       }, range: ${dateRange.start} to ${dateRange.end}`
     );
 
-    // Save file
+    // Save file with unique name
     const uploadId = randomUUID();
     const timestamp = Date.now();
     const savedFilename = `upload_${timestamp}.xlsx`;
@@ -188,10 +193,10 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(savedPath, Buffer.from(buffer));
     console.log(`${getCurrentTimestamp()} [UPLOAD] Saved to: ${savedPath}`);
 
-    // Create upload record
+    // Create upload record (filename = savedFilename, not file.name)
     const upload: HistoricalUpload = {
       id: uploadId,
-      filename: file.name,
+      filename: savedFilename,
       uploadedAt: new Date().toISOString(),
       dataType: validation.dataType,
       rowCount: parsedData.length,
