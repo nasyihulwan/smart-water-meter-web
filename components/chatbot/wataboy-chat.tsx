@@ -23,10 +23,10 @@ interface Message {
 }
 
 const suggestedQuestions = [
-  'Berapa konsumsi air saya bulan ini?',
-  'Bagaimana cara menghemat air?',
-  'Kapan tagihan air saya jatuh tempo?',
-  'Apakah ada kebocoran di rumah saya?',
+  'Berapa konsumsi air saya hari ini?',
+  'Prediksi tagihan bulan ini',
+  'Apakah ada kebocoran? ',
+  'Tips hemat air dong',
 ];
 
 // Parse markdown bold **text** to JSX
@@ -50,7 +50,8 @@ export function WataboyChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Halo! Saya Wataboy 💧 Apa yang bisa saya bantu hari ini?',
+      content:
+        'Halo!  Saya Wataboy 💧 Asisten Smart Water Meter kamu. Ada yang bisa saya bantu? ',
       role: 'bot',
       timestamp: new Date(),
     },
@@ -89,7 +90,14 @@ export function WataboyChat() {
     setIsTyping(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      // ==========================================
+      // 🔧 FIX: Ganti URL ke Next.js API Route
+      // ==========================================
+      // Sebelum: http://localhost:8000/chat (langsung ke Python)
+      // Sesudah: /api/chat (via Next.js → InfluxDB → Python)
+      // ==========================================
+
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +129,7 @@ export function WataboyChat() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content:
-          'Maaf, terjadi kesalahan saat menghubungi server. Silakan coba lagi nanti. 🙏',
+          'Maaf, terjadi kesalahan saat menghubungi server. Silakan coba lagi nanti.  🙏',
         role: 'bot',
         timestamp: new Date(),
       };
@@ -181,14 +189,14 @@ export function WataboyChat() {
                   <Droplets className="h-5 w-5" />
                 </div>
                 {/* Online indicator */}
-                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-400 ring-2 ring-primary" />
+                <span className="absolute -bottom-0.5 -right-0.5 h-3. 5 w-3.5 rounded-full bg-green-400 ring-2 ring-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <CardTitle className="text-base font-semibold tracking-tight">
                   Wataboy
                 </CardTitle>
                 <p className="text-xs text-primary-foreground/70 flex items-center gap-1.5">
-                  <span className="relative flex h-1.5 w-1.5">
+                  <span className="relative flex h-1. 5 w-1.5">
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
                   </span>
                   Online • Siap membantu
@@ -206,7 +214,7 @@ export function WataboyChat() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-full text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                  className="h-8 w-8 rounded-full text-primary-foreground/70 hover: text-primary-foreground hover: bg-primary-foreground/10"
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-4 w-4" />
@@ -226,7 +234,7 @@ export function WataboyChat() {
               <div
                 key={message.id}
                 className={cn(
-                  'flex gap-2.5',
+                  'flex gap-2. 5',
                   message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                 )}
               >
@@ -246,7 +254,7 @@ export function WataboyChat() {
                 </div>
                 <div
                   className={cn(
-                    'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm',
+                    'max-w-[80%] rounded-2xl px-4 py-2. 5 text-sm shadow-sm',
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground rounded-tr-sm'
                       : 'bg-secondary text-secondary-foreground rounded-tl-sm'
@@ -367,13 +375,13 @@ export function WataboyChat() {
             className={cn(
               'flex items-center gap-3 px-4 py-3 rounded-full',
               'bg-primary text-primary-foreground shadow-lg',
-              'hover:bg-primary/90',
+              'hover: bg-primary/90',
               'transition-colors duration-150'
             )}
           >
             <div className="relative">
               <MessageCircle className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-primary" />
+              <span className="absolute -top-1 -right-1 h-2. 5 w-2.5 rounded-full bg-green-400 ring-2 ring-primary" />
             </div>
             <span className="font-medium text-sm">Wataboy</span>
           </button>
