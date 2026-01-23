@@ -4,6 +4,7 @@ import {
   validateUploadedData,
   calculateFileHash,
 } from '@/lib/retrain-utils';
+import { runTraining } from '@/lib/training-service';
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -210,6 +211,32 @@ export async function POST(request: NextRequest) {
     saveMetadata(metadata);
     console.log(`${getCurrentTimestamp()} [UPLOAD] Updated metadata.json`);
 
+    // Auto-trigger training to generate forecast
+    console.log(
+      `${getCurrentTimestamp()} [UPLOAD] Auto-triggering forecast generation...`
+    );
+
+    let trainingResult = null;
+    try {
+      trainingResult = await runTraining(upload.id, true);
+      if (trainingResult.success) {
+        console.log(
+          `${getCurrentTimestamp()} [UPLOAD] Forecast generated successfully!`
+        );
+      } else {
+        console.warn(
+          `${getCurrentTimestamp()} [UPLOAD] Auto-training failed:`,
+          trainingResult.error
+        );
+      }
+    } catch (trainErr) {
+      console.warn(
+        `${getCurrentTimestamp()} [UPLOAD] Auto-training error:`,
+        trainErr
+      );
+      // Continue - upload was successful, training can be done manually
+    }
+
     return NextResponse.json({
       success: true,
       upload: {
@@ -219,6 +246,7 @@ export async function POST(request: NextRequest) {
         rowCount: upload.rowCount,
         dateRange: upload.dateRange,
       },
+      training: trainingResult,
     });
   } catch (err) {
     console.error(`${getCurrentTimestamp()} [UPLOAD] Unexpected error:`, err);

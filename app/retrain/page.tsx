@@ -91,6 +91,20 @@ export default function RetrainPage() {
     formData.append('file', selectedFile);
 
     try {
+      // Show training in progress since upload now auto-triggers training
+      setTrainingStatus({
+        status: 'training',
+        progress: 10,
+        currentStep: 'Uploading and generating forecast...',
+        log: [
+          {
+            timestamp: new Date().toLocaleTimeString(),
+            message: 'Starting upload and auto-training',
+            level: 'info',
+          },
+        ],
+      });
+
       const response = await fetch('/api/upload-historical', {
         method: 'POST',
         body: formData,
@@ -101,17 +115,45 @@ export default function RetrainPage() {
       if (response.status === 409 && result.existingUpload) {
         // File already uploaded, use existing upload id
         setCurrentUploadId(result.existingUpload.id);
+        setTrainingStatus(null);
         alert('ℹ️ File already uploaded, using previous upload.');
         return;
       }
 
       if (!response.ok) {
+        setTrainingStatus(null);
         throw new Error(result.error || 'Upload failed');
       }
 
       setCurrentUploadId(result.upload.id);
-      alert('✅ File uploaded successfully!');
+
+      // Check if auto-training was successful
+      if (result.training?.success) {
+        setTrainingStatus({
+          status: 'success',
+          progress: 100,
+          currentStep: 'Training completed!',
+          log: [
+            {
+              timestamp: new Date().toLocaleTimeString(),
+              message: 'Upload and training completed successfully',
+              level: 'info',
+            },
+          ],
+        });
+        setTrainingResult({
+          success: true,
+          trainingTime: result.training.trainingTime,
+          metrics: result.training.metrics,
+          forecastSummary: result.training.forecastSummary,
+        });
+        alert('✅ File uploaded and forecast generated successfully!');
+      } else {
+        setTrainingStatus(null);
+        alert('✅ File uploaded! Click "Start Training" to generate forecast.');
+      }
     } catch (err) {
+      setTrainingStatus(null);
       alert(
         `❌ Upload failed: ${
           err instanceof Error ? err.message : 'Unknown error'
